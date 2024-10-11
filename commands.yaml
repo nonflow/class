@@ -6,12 +6,16 @@ commands:
 #      - purge cache cloudflare_main zone_id=your_zone_id
       
       # GitLab
-      - list projects gitlab_main
+#      - list projects gitlab_main
+#      - SELECT result FROM query ORDER BY id DESC LIMIT 1
 #      - create issue gitlab_main project_id=123 title="New Issue" description="This is a test issue"
       
       # GitHub
 #      - list repositories github_main filter_key=name filter_value=logo
 #      - list all repositories github_main
+      - SELECT result FROM query ORDER BY id DESC LIMIT 1
+      - SELECT full_name FROM result WHERE name=logo
+#      -
 #      - print value ssh_url where name=logo
 #      - create issue github_main repo_owner=owner repo_name=repo title="New Issue" body="This is a test issue"
       

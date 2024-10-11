@@ -6,8 +6,9 @@ import shlex
 import os
 import json
 import logging
+import sqlite3
 from dotenv import load_dotenv
-from runnerdb import save_result, get_latest_result
+from runnerdb import save_result, get_latest_result, DB_PATH
 
 # Load environment variables from .env file
 load_dotenv()
@@ -26,14 +27,13 @@ logging.basicConfig(
     filemode='a'
 )
 
-# Create a stream handler for console output
-console_handler = logging.StreamHandler()
-console_handler.setLevel(logging_level)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-console_handler.setFormatter(formatter)
-
-# Add the console handler to the root logger
-logging.getLogger('').addHandler(console_handler)
+# Only add console handler if DEBUG_MODE is True
+if DEBUG_MODE:
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging_level)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    console_handler.setFormatter(formatter)
+    logging.getLogger('').addHandler(console_handler)
 
 logger = logging.getLogger(__name__)
 
@@ -157,8 +157,36 @@ def print_value(data, value_key, filter_key, filter_value):
     else:
         print(f"No data found matching the filter: {filter_key}={filter_value}")
 
+def execute_sql_query(query):
+    """Execute a SQL query and return the results."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    try:
+        cursor.execute(query)
+        results = cursor.fetchall()
+        column_names = [description[0] for description in cursor.description]
+        return column_names, results
+    except sqlite3.Error as e:
+        logger.error(f"SQL error: {e}")
+        return None, None
+    finally:
+        conn.close()
+
 def execute_command(command, classes_and_objects, service_config):
     logger.info(f"Executing command: {command}")
+    
+    # Check if the command is a SQL query
+    if command.strip().upper().startswith("SELECT"):
+        column_names, results = execute_sql_query(command)
+        if column_names and results:
+            # Print column names
+            print(" | ".join(column_names))
+            print("-" * (sum(len(name) for name in column_names) + 3 * (len(column_names) - 1)))
+            # Print results
+            for row in results:
+                print(" | ".join(str(value) for value in row))
+        return
+
     parts = shlex.split(command)
     if len(parts) < 2:
         logger.error(f"Invalid command format: {command}")
@@ -205,8 +233,6 @@ def execute_command(command, classes_and_objects, service_config):
 
     method_name = '_'.join(method_parts).lower()
     service_info = service_config[account_alias]
-#     logger.info(f"--account alias: {account_alias}")
-#     exit(0)
 
     service_name = service_info['service']
 

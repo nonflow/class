@@ -5,12 +5,10 @@ import os
 import re
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.mime.application import MIMEApplication
+import os
 
 logger = logging.getLogger(__name__)
-
-def is_valid_email(email):
-    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-    return re.match(pattern, email) is not None
 
 class EmailService:
     def __init__(self, smtp_server, smtp_port, username, password):
@@ -18,6 +16,10 @@ class EmailService:
         self.smtp_port = smtp_port
         self.username = username
         self.password = password
+
+    def is_valid_email(email):
+        pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        return re.match(pattern, email) is not None
 
     def check_ports(self, host, ports):
         results = {}
@@ -43,7 +45,7 @@ class EmailService:
             print(f"Port {port}: {status}")
 
     def send_email(self, to_email, subject, body, is_html=False):
-        if not is_valid_email(to_email):
+        if not self.is_valid_email(to_email):
             logger.error(f"Invalid email address: {to_email}")
             return "Invalid email address"
 
@@ -51,8 +53,14 @@ class EmailService:
         msg['From'] = self.username
         msg['To'] = to_email
         msg['Subject'] = subject
-        # msg.attach(MIMEText(body, 'plain'))
-        msg.attach(MIMEText(body, 'html' if is_html else 'plain'))
+        msg.attach(MIMEText(body, 'plain'))
+
+        if attachments:
+            for attachment in attachments:
+                with open(attachment, "rb") as file:
+                    part = MIMEApplication(file.read(), Name=os.path.basename(attachment))
+                part['Content-Disposition'] = f'attachment; filename="{os.path.basename(attachment)}"'
+                msg.attach(part)
 
         try:
             with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
@@ -61,16 +69,40 @@ class EmailService:
                 server.send_message(msg)
             logger.info(f"Email sent successfully to {to_email}")
             return "Email sent successfully"
-        except smtplib.SMTPAuthenticationError:
-            logger.error("Authentication failed. Check your username and password.")
-            return "Authentication failed"
-        except smtplib.SMTPConnectError:
-            logger.error("Failed to connect to the server.")
-            return "Connection error"
         except smtplib.SMTPException as e:
             logger.error(f"Failed to send email to {to_email}. Error: {str(e)}")
             return f"Failed to send email: {str(e)}"
 
+    def send_html_email(self, to_email, subject, html_body):
+        msg = MIMEMultipart()
+        msg['From'] = self.username
+        msg['To'] = to_email
+        msg['Subject'] = subject
+        msg.attach(MIMEText(html_body, 'html'))
+
+        try:
+            with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
+                server.starttls()
+                server.login(self.username, self.password)
+                server.send_message(msg)
+            logger.info(f"HTML email sent successfully to {to_email}")
+            return "HTML email sent successfully"
+        except smtplib.SMTPException as e:
+            logger.error(f"Failed to send HTML email to {to_email}. Error: {str(e)}")
+            return f"Failed to send HTML email: {str(e)}"
+
+    def send_bulk_email(self, to_emails, subject, body):
+        successful_sends = 0
+        failed_sends = 0
+
+        for email in to_emails:
+            result = self.send_email(email, subject, body)
+            if "successfully" in result:
+                successful_sends += 1
+            else:
+                failed_sends += 1
+
+        return f"Bulk email sent. Successful: {successful_sends}, Failed: {failed_sends}"
 
 class GmailService(EmailService):
     def __init__(self, username, password):
@@ -79,5 +111,3 @@ class GmailService(EmailService):
 class OutlookService(EmailService):
     def __init__(self, username, password):
         super().__init__('smtp-mail.outlook.com', 587, username, password)
-
-

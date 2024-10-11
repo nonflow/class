@@ -1,0 +1,17 @@
+Account:
+  email:
+    "tom@domain.com":
+      server: "server1.domain.com"
+      username: "user1"
+      password: "pass1"
+      port: 1111
+    "jane@domain.com":
+      server: "server2.domain.com"
+      username: "user2"
+      password: "pass2"
+      port: 2222
+    "admin@domain.com":
+      server: "server3.domain.com"
+      username: "user3"
+      password: "pass3"
+      port: 3333

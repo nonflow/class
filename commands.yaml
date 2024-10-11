@@ -1,0 +1,8 @@
+commands:
+  - Account connect email="tom@domain.com"
+  - Message list from=2024-08-01 to=today
+  - Message create sender="user@example.com" content="Hello, world!" subject="Test"
+  - Message read id=1
+  - Message read from=yesterday
+  - Message delete id=1
+  - Account disconnect

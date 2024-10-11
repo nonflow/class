@@ -1,0 +1,19 @@
+cloudflare_main:
+  service: CloudflareService
+  api_key: your_actual_api_key
+  email: your_actual_email@example.com
+
+gitlab_main:
+  service: GitLabService
+  base_url: https://gitlab.com
+  private_token: your_actual_private_token
+
+github_main:
+  service: GitHubService
+  access_token: your_actual_access_token
+
+plesk_main:
+  service: PleskService
+  host: your_actual_plesk_host
+  username: your_actual_username
+  password: your_actual_password

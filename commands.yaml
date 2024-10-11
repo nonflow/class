@@ -2,20 +2,20 @@ commands:
   python:
     sentence:
       # Cloudflare
-      - list zones CloudflareService api_key=your_api_key email=your_email@example.com
-      - purge cache CloudflareService api_key=your_api_key email=your_email@example.com zone_id=your_zone_id
+      - list zones cloudflare_main
+      - purge cache cloudflare_main zone_id=your_zone_id
       
       # GitLab
-      - list projects GitLabService base_url=https://gitlab.com private_token=your_private_token
-      - create issue GitLabService base_url=https://gitlab.com private_token=your_private_token project_id=123 title="New Issue" description="This is a test issue"
+      - list projects gitlab_main
+      - create issue gitlab_main project_id=123 title="New Issue" description="This is a test issue"
       
       # GitHub
-      - list repositories GitHubService access_token=your_access_token
-      - create issue GitHubService access_token=your_access_token repo_owner=owner repo_name=repo title="New Issue" body="This is a test issue"
+      - list repositories github_main
+      - create issue github_main repo_owner=owner repo_name=repo title="New Issue" body="This is a test issue"
       
       # Plesk
-      - list domains PleskService host=your_plesk_host username=admin password=admin_password
-      - create database PleskService host=your_plesk_host username=admin password=admin_password webspace_name=example.com db_name=mydb db_user=dbuser db_password=dbpass
+      - list domains plesk_main
+      - create database plesk_main webspace_name=example.com db_name=mydb db_user=dbuser db_password=dbpass
 
     alias:
       param:

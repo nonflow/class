@@ -1,4 +1,3 @@
-```bash
 _   _             _____ _               
 | \ | |           |  ___| |              
 |  \| | ___  _ __ | |_  | | _____      __
@@ -19,13 +18,17 @@ The project consists of the following main components:
 1. `runner.py`: The main script that loads commands from a YAML file and executes them.
 2. `python/`: Directory containing service classes (e.g., CloudflareService, GitLabService, GitHubService, PleskService).
 3. `commands.yaml`: Contains the list of commands to be executed by the runner.
-4. `requirements.txt`: Lists the Python dependencies for the project.
-5. `logo/`: Directory containing logo files for the project.
+4. `private.yaml`: Stores sensitive information like API keys and tokens.
+5. `.env`: Contains environment variables for configuring file paths.
+6. `requirements.txt`: Lists the Python dependencies for the project.
+7. `logo/`: Directory containing logo files for the project.
 
 ## How It Works
 
 1. The `runner.py` script is the entry point of the application. It does the following:
+   - Loads environment variables from the `.env` file.
    - Loads commands from the specified YAML file.
+   - Loads service configuration from `private.yaml`.
    - Dynamically imports and recognizes all service classes in the `python/` directory.
    - Lists available classes and their methods.
    - Executes the commands specified in the YAML file.
@@ -40,36 +43,65 @@ The `commands.yaml` file has the following structure:
 commands:
   python:
     sentence:
-      - list zones CloudflareService api_key=your_api_key email=your_email@example.com
-      - list projects GitLabService base_url=https://gitlab.com private_token=your_private_token
+      - list zones cloudflare_main
+      - list projects gitlab_main
       # ... more commands ...
 ```
 
-Each command specifies the method to call (using spaces instead of underscores), the service to use, and the necessary parameters.
+Each command specifies the method to call (using spaces instead of underscores) and an account alias that references the service configuration in `private.yaml`.
+
+## Service Configuration
+
+The `private.yaml` file stores sensitive information like API keys and tokens. It has the following structure:
+
+```yaml
+cloudflare_main:
+  service: CloudflareService
+  api_key: your_actual_api_key
+  email: your_actual_email@example.com
+
+gitlab_main:
+  service: GitLabService
+  base_url: https://gitlab.com
+  private_token: your_actual_private_token
+
+# ... more services and accounts ...
+```
+
+Each account alias contains the service class name and the necessary credentials for that service.
+
+## Environment Variables
+
+The `.env` file is used to set the paths for the `private.yaml` and `commands.yaml` files. It has the following structure:
+
+```
+PRIVATE_YAML_PATH=private.yaml
+COMMANDS_YAML_PATH=commands.yaml
+```
+
+This allows you to easily change the location of these files without modifying the `runner.py` script.
 
 ## Usage
 
 To run the command runner:
 
 ```
-python runner.py commands.yaml
+python runner.py
 ```
 
-Make sure you have a `commands.yaml` file in the same directory with the list of commands you want to execute.
+Make sure you have the `.env`, `commands.yaml`, and `private.yaml` files in the correct locations as specified in your `.env` file.
 
 ## Using Real Credentials
 
 To use the runner with real credentials:
 
-1. Open the `commands.yaml` file.
-2. Replace the placeholder values with your actual API keys, tokens, and other credentials. For example:
-   ```yaml
-   - list zones CloudflareService api_key=your_actual_api_key email=your_actual_email@example.com
-   ```
-3. Save the `commands.yaml` file.
-4. Run the runner as described in the Usage section.
+1. Open the `private.yaml` file.
+2. Replace the placeholder values with your actual API keys, tokens, and other credentials.
+3. In the `commands.yaml` file, use the appropriate account aliases that you've defined in `private.yaml`.
+4. Save both files.
+5. Run the runner as described in the Usage section.
 
-**IMPORTANT**: Never commit your real credentials to version control. Consider using environment variables or a separate, gitignored configuration file for sensitive information.
+**IMPORTANT**: Never commit your `private.yaml` file with real credentials to version control. Add it to your `.gitignore` file to prevent accidental commits.
 
 ## Starting Projects and Running Tests
 
@@ -88,21 +120,26 @@ To start a new project:
 
 3. Create your `commands.yaml` file based on the provided example.
 
-4. Replace the placeholder credentials in `commands.yaml` with your actual API keys and tokens.
+4. Create your `private.yaml` file and add your actual API keys and tokens.
 
-5. Run the runner:
+5. Set up your `.env` file with the correct paths for `private.yaml` and `commands.yaml`.
+
+6. Run the runner:
    ```
-   python runner.py commands.yaml
+   python runner.py
    ```
 
 ## Dependencies
 
 - PyYAML: Used for parsing YAML files.
 - Requests: Used for making HTTP requests to APIs.
+- python-dotenv: Used for loading environment variables from .env file.
 
 ## Configuration
 
-Modify the `commands.yaml` file to include the commands you want to execute with the appropriate credentials.
+1. Modify the `commands.yaml` file to include the commands you want to execute, using appropriate account aliases.
+2. Update the `private.yaml` file with your actual credentials for each service and account.
+3. Set up the `.env` file with the correct paths for `private.yaml` and `commands.yaml`.
 
 ## Extending the Project
 
@@ -113,6 +150,7 @@ To add a new service:
 1. Create a new Python file in the `python/` directory (e.g., `new_service.py`).
 2. Define your service class with the necessary methods.
 3. Add commands using your new service to the `commands.yaml` file.
+4. Add the corresponding configuration to the `private.yaml` file.
 
 The runner will automatically detect and make available your new service.
 

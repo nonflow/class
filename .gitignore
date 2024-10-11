@@ -1,6 +1,7 @@
 .idea
 .env
 .venv
+.private
 venv
 # Byte-compiled / optimized / DLL files
 __pycache__/

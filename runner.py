@@ -4,9 +4,24 @@ import yaml
 import sys
 import shlex
 import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Add the 'python' directory to the Python path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'python'))
+
+# Define global variables
+PRIVATE_YAML_PATH = os.getenv('PRIVATE_YAML_PATH', 'private.yaml')
+COMMANDS_YAML_PATH = os.getenv('COMMANDS_YAML_PATH', 'commands.yaml')
+
+# Load configuration
+commands_data = None
+service_config = None
+classes_and_objects = None
+aliases = None
+converters = None
 
 def load_yaml(file_path):
     with open(file_path, 'r') as file:
@@ -88,33 +103,34 @@ def parse_command_args(args):
 
     return parsed_args
 
-def execute_command(command, classes_and_objects):
+def execute_command(command, classes_and_objects, service_config):
     parts = shlex.split(command)
     if len(parts) < 2:
         print(f"Error: Invalid command format: {command}")
         return
 
     method_parts = []
-    service_name = None
+    account_alias = None
     for part in parts:
-        if part in classes_and_objects:
-            service_name = part
+        if part in service_config:
+            account_alias = part
             break
         method_parts.append(part)
 
-    if not service_name:
-        print(f"Error: Invalid service name in command: {command}")
+    if not account_alias:
+        print(f"Error: Invalid account alias in command: {command}")
         return
 
     method_name = '_'.join(method_parts).lower()
-    
-    service_class = classes_and_objects[service_name]['class']
-    all_args = parse_command_args(parts[len(method_parts)+1:])
+    service_info = service_config[account_alias]
+    service_name = service_info['service']
 
-    # Separate constructor args from method args
-    constructor_params = inspect.signature(service_class.__init__).parameters
-    constructor_args = {k: v for k, v in all_args.items() if k in constructor_params}
-    method_args = {k: v for k, v in all_args.items() if k not in constructor_params}
+    if service_name not in classes_and_objects:
+        print(f"Error: Invalid service name: {service_name}")
+        return
+
+    service_class = classes_and_objects[service_name]['class']
+    constructor_args = {k: v for k, v in service_info.items() if k != 'service'}
 
     # Create an instance of the service
     try:
@@ -129,6 +145,9 @@ def execute_command(command, classes_and_objects):
 
     method = classes_and_objects[service_name]['methods'][method_name]
 
+    # Parse method arguments
+    method_args = parse_command_args(parts[len(method_parts)+1:])
+
     try:
         result = method(instance, **method_args)
         print(f"Result of {service_name}.{method_name}: {result}")
@@ -136,12 +155,10 @@ def execute_command(command, classes_and_objects):
         print(f"Error executing {service_name}.{method_name}: {str(e)}")
 
 def main():
-    if len(sys.argv) != 2:
-        print("Usage: python runner.py commands.yaml")
-        sys.exit(1)
+    global commands_data, service_config, classes_and_objects, aliases, converters
 
-    commands_file = sys.argv[1]
-    commands_data = load_yaml(commands_file)
+    commands_data = load_yaml(COMMANDS_YAML_PATH)
+    service_config = load_yaml(PRIVATE_YAML_PATH)
 
     classes_and_objects = list_classes_and_objects()
 
@@ -162,7 +179,7 @@ def main():
         print(f"\nRUN: {command}")
         if replaced_command != command:
             print(f"Replaced: {replaced_command}")
-        execute_command(replaced_command, classes_and_objects)
+        execute_command(replaced_command, classes_and_objects, service_config)
 
 if __name__ == "__main__":
     main()

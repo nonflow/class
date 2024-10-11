@@ -38,11 +38,11 @@ def replace_aliases(command, aliases):
     for part in parts:
         if '=' in part:
             key, value = part.split('=', 1)
-            new_key = aliases['param'].get(key, key)
-            new_value = aliases['modifier'].get(value, value)
+            new_key = aliases['param'].get(key, key)  # Use original if no alias
+            new_value = aliases['modifier'].get(value, value)  # Use original if no alias
             new_parts.append(f"{new_key}={new_value}")
         else:
-            new_parts.append(aliases['action'].get(part, part))
+            new_parts.append(aliases['action'].get(part, part))  # Use original if no alias
     return ' '.join(new_parts)
 
 def execute_command(command, classes_and_objects):
@@ -104,12 +104,12 @@ def main():
 
     aliases = commands_data['commands']['python']['alias']
     print("\nExecuting commands:")
-    for command in commands_data['commands']['python']:
-        if isinstance(command, str):  # Skip the 'alias' dictionary
-            replaced_command = replace_aliases(command, aliases)
-            print(f"\nRUN: {command}")
+    for command in commands_data['commands']['python']['sentence']:
+        replaced_command = replace_aliases(command, aliases)
+        print(f"\nRUN: {command}")
+        if replaced_command != command:
             print(f"Replaced: {replaced_command}")
-            execute_command(replaced_command, classes_and_objects)
+        execute_command(replaced_command, classes_and_objects)
 
 if __name__ == "__main__":
     main()

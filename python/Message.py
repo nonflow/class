@@ -29,23 +29,7 @@ class Message:
             print(f"No message found with ID: {id}")
             return None
 
-
-    def list(self, **kwargs):
-        print("\nKeyword arguments:")
-        datetime_from = ''
-        datetime_to = ''
-        for key, value in kwargs.items():
-            print(f"{key}: {value}")
-            if key == 'from':
-                datetime_from = datetime.strptime(value, "%Y-%m-%d")
-            if key == 'to':
-                datetime_to = datetime.strptime(value, "%Y-%m-%d")
-
-        print("Messages between", datetime_from, "and", datetime_to, ":")
-
-
-
-    def list_item2(self, from_date: str, to_date: str):
+    def list(self, from_date: str, to_date: str):
         datetime_from = datetime.strptime(from_date, "%Y-%m-%d")
         datetime_to = datetime.strptime(to_date, "%Y-%m-%d")
         print("Messages between", datetime_from, "and", datetime_to, ":")

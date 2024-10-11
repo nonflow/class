@@ -1,4 +1,4 @@
-```shell
+```bash
 _   _             _____ _               
 | \ | |           |  ___| |              
 |  \| | ___  _ __ | |_  | | _____      __
@@ -7,7 +7,7 @@ _   _             _____ _
 \_| \_/\___/|_| |_\_|   |_|\___/ \_/\_/  
 ```
 
-# Command Runner Project
+# Run Command by Sentences
 ![NonFlow Logo](logo/nonflow.svg)
 
 This project implements a flexible command runner system that dynamically loads and executes commands from a YAML file. It includes functionality for managing accounts and messages, with support for command aliases.
@@ -61,18 +61,19 @@ commands:
       - Message list from=2024-08-01 to=today
       # ... more commands ...
     alias:
-      action:
-        list: show
-        # ... more action aliases ...
       param:
         from: from_date
-        # ... more parameter aliases ...
+        to: to_date
       modifier:
         today: current_date
-        # ... more modifier aliases ...
+        yesterday: previous_date
+    convert:
+      param:
+        today: current_date
+        yesterday: previous_date
 ```
 
-The `sentence` section contains the actual commands to be executed. The `alias` section defines aliases for actions, parameters, and modifiers, allowing for more flexible command syntax.
+The `sentence` section contains the actual commands to be executed. The `alias` section defines aliases for parameters and modifiers, allowing for more flexible command syntax. The new `convert.param` section provides additional parameter conversions, which can be used to transform certain parameter values before execution.
 
 ## Usage
 

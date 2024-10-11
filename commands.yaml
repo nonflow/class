@@ -1,24 +1,17 @@
 commands:
   python:
     sentence:
-      - Account connect email="tom@domain.com"
-      - Message list from=2024-08-01 to=today
-      - Message create sender="user@example.com" content="Hello, world!" subject="Test"
-      - Message read id=1
-      - Message read from=yesterday
-      - Message delete id=1
-      - Account disconnect
+      - connect Account email="tom@domain.com"
+      - list Message from=2024-08-01 to=today
+      - create Message sender="user@example.com" content="Hello, world!" subject="Test"
+      - read Message id=1
+      - delete Message id=1
+      - disconnect Account
     alias:
-      action:
-        list: show
-        create: new
-        read: view
-        delete: remove
       param:
         from: from_date
         to: to_date
-        sender: from
-        content: body
-      modifier:
-        today: current_date
-        yesterday: previous_date
+    convert:
+      param:
+        today: date_converters.current_date
+        yesterday: date_converters.previous_date

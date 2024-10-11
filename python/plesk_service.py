@@ -1,5 +1,14 @@
 import requests
 import xml.etree.ElementTree as ET
+import warnings
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Suppress only the single InsecureRequestWarning
+warnings.filterwarnings('ignore', message='Unverified HTTPS request')
 
 class PleskService:
     def __init__(self, host, username, password):
@@ -13,14 +22,19 @@ class PleskService:
             "Content-Type": "text/xml",
             "HTTP_PRETTY_PRINT": "TRUE",
         }
-        response = requests.post(
-            self.base_url,
-            headers=headers,
-            auth=(self.username, self.password),
-            data=xml_request,
-            verify=False  # Note: In production, you should use proper SSL verification
-        )
-        return ET.fromstring(response.content)
+        try:
+            response = requests.post(
+                self.base_url,
+                headers=headers,
+                auth=(self.username, self.password),
+                data=xml_request,
+                verify=False  # Note: In production, you should use proper SSL verification
+            )
+            response.raise_for_status()
+            return ET.fromstring(response.content)
+        except requests.RequestException as e:
+            logger.error(f"Error sending request to Plesk: {e}")
+            return None
 
     def list_domains(self):
         xml_request = """
@@ -36,6 +50,8 @@ class PleskService:
         </packet>
         """
         response = self._send_request(xml_request)
+        if response is None:
+            return []
         domains = []
         for domain in response.findall(".//name"):
             domains.append(domain.text)
@@ -59,4 +75,18 @@ class PleskService:
         </packet>
         """
         response = self._send_request(xml_request)
-        return "Database created successfully" if response.find(".//result").get("code") == "ok" else "Failed to create database"
+        if response is None:
+            return "Failed to create database: No response from server"
+        
+        result = response.find(".//result")
+        if result is None:
+            logger.error(f"Unexpected response structure: {ET.tostring(response, encoding='unicode')}")
+            return "Failed to create database: Unexpected response structure"
+        
+        if result.get("code") == "ok":
+            return "Database created successfully"
+        else:
+            error_text = result.find(".//text")
+            error_message = error_text.text if error_text is not None else "Unknown error"
+            logger.error(f"Failed to create database: {error_message}")
+            return f"Failed to create database: {error_message}"

@@ -155,6 +155,48 @@ To add a new service:
 
 The runner will automatically detect and make available your new service.
 
+## Recent Updates
+
+### PleskService Improvements
+
+The PleskService class has been updated to address some issues:
+
+1. SSL verification warnings are now suppressed. Note that this is not recommended for production use, and proper SSL verification should be implemented in a real-world scenario.
+2. Error handling has been improved in the `create_database` method.
+3. Logging has been added throughout the class to help diagnose issues.
+
+### GitHubService Enhancements
+
+The GitHubService class has been updated with the following improvements:
+
+1. The `list_repositories` method now supports more flexible filtering:
+   - You can specify a `filter_key` (default is 'name') and a `filter_value`.
+   - Filtering is case-insensitive.
+   - If no filter is applied, all repositories are returned.
+2. Error handling and logging have been added to both `list_repositories` and `create_issue` methods.
+3. Docstrings have been added to improve documentation.
+
+To use the updated `list_repositories` method in your `commands.yaml`:
+
+```yaml
+commands:
+  python:
+    sentence:
+      - list repositories github_main filter_key=name filter_value=myrepo
+      - list repositories github_main  # Lists all repositories
+```
+
+### Logging
+
+Logging has been implemented in both PleskService and GitHubService classes. To view more detailed logs, you can adjust the logging level in your Python script or environment. For example:
+
+```python
+import logging
+logging.basicConfig(level=logging.DEBUG)
+```
+
+This will show more detailed log messages, which can be helpful for troubleshooting.
+
 ## License
 
 Please refer to the LICENSE file in the project repository for licensing information.

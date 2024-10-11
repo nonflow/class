@@ -1,1 +1,0 @@
-all arguments for constructor should be private and will be get from file private.yaml with structure hierarhy: <python class>.<alias account>.<params>

@@ -4,24 +4,47 @@ commands:
       # Cloudflare
 #      - list zones cloudflare_main
 #      - purge cache cloudflare_main zone_id=your_zone_id
-      
+
       # GitLab
 #      - list projects gitlab_main
 #      - SELECT result FROM query ORDER BY id DESC LIMIT 1
 #      - create issue gitlab_main project_id=123 title="New Issue" description="This is a test issue"
-      
+
       # GitHub
 #      - list repositories github_main filter_key=name filter_value=logo
 #      - list all repositories github_main
-      - SELECT result FROM query ORDER BY id DESC LIMIT 1
-      - SELECT full_name FROM result WHERE name=logo
-#      -
-#      - print value ssh_url where name=logo
-#      - create issue github_main repo_owner=owner repo_name=repo title="New Issue" body="This is a test issue"
+#      - SELECT result FROM query ORDER BY id DESC LIMIT 1
+#      - SELECT result FROM query LIMIT 1
+#      - SELECT result FROM query ORDER BY id ASC LIMIT 1 WHERE result LIKE '%"full_name"%' AND result LIKE '%"name":"logo"%'
+#      - create issue github_main repo_owner=nonflow repo_name=class title="New Issue" body="This is a test issue"
       
       # Plesk
 #      - list domains plesk_main
-#      - create database plesk_main webspace_name=example.com db_name=mydb db_user=dbuser db_password=dbpass
+      #      - create database plesk_main webspace_name=example.com db_name=mydb db_user=dbuser db_password=dbpass
+
+      # Email
+      - send email softreck to_email=tom@sapletta.com subject="Test Email" body="This is a test email sent from the command runner."
+
+      # SQL queries for JSON data (using string manipulation)
+#      - SELECT substr(result, instr(result, '"name":"') + 8, instr(substr(result, instr(result, '"name":"') + 8), '"') - 1) as name,
+#               substr(result, instr(result, '"full_name":"') + 13, instr(substr(result, instr(result, '"full_name":"') + 13), '"') - 1) as full_name
+#        FROM json_result
+#        WHERE result NOT LIKE '%"private":true%'
+#      - SELECT substr(result, instr(result, '"login":"') + 9, instr(substr(result, instr(result, '"login":"') + 9), '"') - 1) as owner,
+#               COUNT(*) as repo_count
+#        FROM json_result
+#        GROUP BY substr(result, instr(result, '"login":"') + 9, instr(substr(result, instr(result, '"login":"') + 9), '"') - 1)
+#      - SELECT substr(result, instr(result, '"name":"') + 8, instr(substr(result, instr(result, '"name":"') + 8), '"') - 1) as name,
+#               CAST(substr(result, instr(result, '"stargazers_count":') + 19, instr(substr(result, instr(result, '"stargazers_count":') + 19), ',') - 1) AS INTEGER) as stars
+#        FROM json_result
+#        ORDER BY CAST(substr(result, instr(result, '"stargazers_count":') + 19, instr(substr(result, instr(result, '"stargazers_count":') + 19), ',') - 1) AS INTEGER) DESC
+#        LIMIT 5
+
+      # SQL query for XML data (treating as text)
+#      - SELECT result,
+#               substr(result, instr(result, '<name>') + 6, instr(substr(result, instr(result, '<name>') + 6), '</name>') - 1) as domain_name
+#        FROM query
+#        WHERE method_name = 'list_domains'
 
     alias:
       param:

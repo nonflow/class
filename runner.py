@@ -7,6 +7,7 @@ import os
 import json
 import logging
 import sqlite3
+import xml.etree.ElementTree as ET
 from dotenv import load_dotenv
 from runnerdb import save_result, get_latest_result, DB_PATH
 
@@ -157,14 +158,44 @@ def print_value(data, value_key, filter_key, filter_value):
     else:
         print(f"No data found matching the filter: {filter_key}={filter_value}")
 
+def xml_to_json(xml_string):
+    root = ET.fromstring(xml_string)
+    return json.dumps(xml_to_dict(root))
+
+def xml_to_dict(element):
+    result = {}
+    for child in element:
+        if len(child) == 0:
+            result[child.tag] = child.text
+        else:
+            result[child.tag] = xml_to_dict(child)
+    return result
+
+def create_json_result_view():
+    """Create the json_result view if it doesn't exist."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("CREATE TEMP VIEW IF NOT EXISTS json_result AS SELECT id, result FROM query")
+        conn.commit()
+        logger.info("Created json_result view")
+    except sqlite3.Error as e:
+        logger.error(f"Error creating json_result view: {e}")
+    finally:
+        conn.close()
+
 def execute_sql_query(query):
     """Execute a SQL query and return the results."""
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
+    
     try:
+        # Execute the actual query
         cursor.execute(query)
         results = cursor.fetchall()
         column_names = [description[0] for description in cursor.description]
+        logger.info(f"SQL query executed: {query}")
+        logger.info(f"Number of results: {len(results)}")
         return column_names, results
     except sqlite3.Error as e:
         logger.error(f"SQL error: {e}")
@@ -185,6 +216,9 @@ def execute_command(command, classes_and_objects, service_config):
             # Print results
             for row in results:
                 print(" | ".join(str(value) for value in row))
+            logger.info(f"SQL query results printed")
+        else:
+            logger.warning("No results returned from SQL query")
         return
 
     parts = shlex.split(command)
@@ -215,6 +249,7 @@ def execute_command(command, classes_and_objects, service_config):
         data = get_latest_result(service_name, method_name)
         if data:
             print_value(data, value_key, filter_key, filter_value)
+            logger.info(f"Printed value for {service_name}.{method_name}")
         else:
             logger.error(f"No data found for {service_name}_{method_name}")
         return
@@ -289,6 +324,9 @@ def main():
 
     aliases = commands_data['commands']['python'].get('alias', {})
     converters = commands_data['commands']['python'].get('convert', {}).get('param', {})
+    
+    # Create json_result view
+    create_json_result_view()
     
     logger.info("\nExecuting commands:")
     for command in commands_data['commands']['python']['sentence']:

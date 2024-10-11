@@ -25,6 +25,9 @@ The project consists of the following main components:
 7. `requirements.txt`: Lists the Python dependencies for the project.
 8. `logo/`: Directory containing logo files for the project.
 9. `.logs`: Log file containing detailed execution logs.
+10. `tests/`: Directory containing unit tests for the project.
+11. `run_tests.sh`: Bash script to run unit tests.
+12. `TESTING.md`: Documentation for running and writing tests.
 
 ## How It Works
 
@@ -109,6 +112,39 @@ The database stores the following information for each command execution:
 
 This allows for easy retrieval and analysis of past command executions.
 
+## SQL Queries on JSON and XML Data
+
+The runner now supports executing SQL queries on JSON and XML data stored in the 'result' column of the database. This feature allows for complex data analysis and retrieval directly from the stored results.
+
+### JSON Queries
+
+You can use SQL queries with JSON functions to extract and analyze data from the 'result' column. For example:
+
+```yaml
+- SELECT json_extract(json_result, '$.name') as name, json_extract(json_result, '$.full_name') as full_name FROM json_result WHERE json_extract(json_result, '$.private') = 0
+```
+
+This query extracts the 'name' and 'full_name' from JSON data for public repositories.
+
+### XML Queries
+
+For XML data, the system first converts it to JSON, then you can query it. For example:
+
+```yaml
+- SELECT xml_to_json(result) as json_result, json_extract(xml_to_json(result), '$.domain.name') as domain_name FROM query WHERE method_name = 'list_domains'
+```
+
+This query extracts domain names from XML data stored in the 'result' column.
+
+### Usage
+
+To use these SQL queries:
+
+1. Add them to the `commands.yaml` file under the `commands.python.sentence` section.
+2. Run the `runner.py` script, and it will execute these SQL queries along with other commands.
+
+You can create your own custom queries following these patterns to extract and analyze data from JSON or XML results stored in the database.
+
 ## Logging
 
 The project now uses a dedicated log file (`.logs`) to store detailed information about the execution process. This includes:
@@ -170,6 +206,25 @@ To start a new project:
 
 7. Check the `.logs` file for detailed execution information.
 
+## Running Tests
+
+The project includes a comprehensive suite of unit tests. To run the tests:
+
+1. Make sure you're in the project root directory.
+
+2. Run all tests using the provided bash script:
+   ```
+   ./run_tests.sh
+   ```
+
+3. To run tests for a specific service:
+   ```
+   ./run_tests.sh <service_name>
+   ```
+   Replace `<service_name>` with the name of the service (e.g., cloudflare_service, gitlab_service).
+
+4. For more detailed information about testing, refer to the `TESTING.md` file.
+
 ## Dependencies
 
 - PyYAML: Used for parsing YAML files.
@@ -193,10 +248,23 @@ To add a new service:
 2. Define your service class with the necessary methods.
 3. Add commands using your new service to the `commands.yaml` file.
 4. Add the corresponding configuration to the `.private` file.
+5. Create unit tests for your new service in the `tests/` directory.
 
 The runner will automatically detect and make available your new service.
 
 ## Recent Updates
+
+### Unit Testing
+
+- Added comprehensive unit tests for all services and modules.
+- Created a bash script (`run_tests.sh`) to easily run tests.
+- Added documentation for running and writing tests in `TESTING.md`.
+
+### SQL Queries on JSON and XML Data
+
+- Added support for executing SQL queries on JSON and XML data stored in the 'result' column.
+- Updated `runner.py` to handle JSON and XML queries using SQLite's JSON1 extension.
+- Added example queries in `commands.yaml` to demonstrate the new functionality.
 
 ### Logging Enhancements
 

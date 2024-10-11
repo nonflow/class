@@ -1,19 +1,31 @@
+# IMPORTANT: Replace the placeholder values below with your actual credentials
+
 cloudflare_main:
   service: CloudflareService
-  api_key: your_actual_api_key
-  email: your_actual_email@example.com
+  api_key: your_actual_api_key  # TODO: Replace with your Cloudflare API key
+  email: your_actual_email@example.com  # TODO: Replace with your Cloudflare account email
 
 gitlab_main:
   service: GitLabService
   base_url: https://gitlab.com
-  private_token: your_actual_private_token
+  private_token: your_actual_private_token  # TODO: Replace with your GitLab private token
 
 github_main:
   service: GitHubService
-  access_token: your_actual_access_token
+  access_token: your_actual_access_token  # TODO: Replace with your GitHub personal access token
 
 plesk_main:
   service: PleskService
-  host: localhost  # Replace with actual Plesk hostname or IP if different
-  username: your_actual_username
-  password: your_actual_password
+  host: your_plesk_host  # TODO: Replace with your Plesk server hostname or IP address
+  username: your_actual_username  # TODO: Replace with your Plesk username
+  password: your_actual_password  # TODO: Replace with your Plesk password
+
+email_main:
+  service: EmailService
+  smtp_server: your_smtp_server  # TODO: Replace with your SMTP server address (e.g., smtp.gmail.com)
+  smtp_port: 587  # TODO: Replace with your SMTP port (587 is a common port for TLS)
+  username: your_email@example.com  # TODO: Replace with your email address
+  password: your_email_password  # TODO: Replace with your email password or app-specific password
+
+# After updating this file with your actual credentials, make sure to keep it secure and do not share it publicly.
+# Remove the TODO comments after you've replaced the placeholder values.

@@ -17,6 +17,14 @@ class PleskService:
         self.password = password
         self.base_url = f"https://{host}:8443/enterprise/control/agent.php"
 
+    def _create_auth_xml(self):
+        return f"""
+        <auth>
+            <login>{self.username}</login>
+            <password>{self.password}</password>
+        </auth>
+        """
+
     def _send_request(self, xml_request):
         headers = {
             "Content-Type": "text/xml",
@@ -26,19 +34,21 @@ class PleskService:
             response = requests.post(
                 self.base_url,
                 headers=headers,
-                auth=(self.username, self.password),
                 data=xml_request,
                 verify=False  # Note: In production, you should use proper SSL verification
             )
             response.raise_for_status()
+            logger.debug(f"XML Response: {response.content.decode('utf-8')}")
             return ET.fromstring(response.content)
         except requests.RequestException as e:
             logger.error(f"Error sending request to Plesk: {e}")
             return None
 
     def list_domains(self):
-        xml_request = """
+        logger.info("Fetching list of domains from Plesk")
+        xml_request = f"""
         <packet>
+            {self._create_auth_xml()}
             <webspace>
                 <get>
                     <filter/>
@@ -51,15 +61,25 @@ class PleskService:
         """
         response = self._send_request(xml_request)
         if response is None:
+            logger.error("Failed to get response from Plesk server")
             return []
+        
         domains = []
         for domain in response.findall(".//name"):
             domains.append(domain.text)
+        
+        if not domains:
+            logger.info("No domains found in Plesk account")
+        else:
+            logger.info(f"Found {len(domains)} domains")
+        
         return domains
 
     def create_database(self, webspace_name, db_name, db_user, db_password):
+        logger.info(f"Creating database {db_name} in webspace {webspace_name}")
         xml_request = f"""
         <packet>
+            {self._create_auth_xml()}
             <database>
                 <add>
                     <webspace-id>{webspace_name}</webspace-id>
@@ -84,6 +104,7 @@ class PleskService:
             return "Failed to create database: Unexpected response structure"
         
         if result.get("code") == "ok":
+            logger.info(f"Database {db_name} created successfully")
             return "Database created successfully"
         else:
             error_text = result.find(".//text")

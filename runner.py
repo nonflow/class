@@ -5,10 +5,26 @@ import sys
 import shlex
 import os
 import json
+import logging
 from dotenv import load_dotenv
+from runnerdb import save_result, get_latest_result
 
 # Load environment variables from .env file
 load_dotenv()
+
+# Configure logging
+LOG_FILE = os.getenv('LOG_FILE_PATH', '.logs')
+print(f"Log file path: {LOG_FILE}")  # Debug print
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    filename=LOG_FILE,
+    filemode='a'
+)
+logger = logging.getLogger(__name__)
+
+print("Logging configured")  # Debug print
 
 # Add the 'python' directory to the Python path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'python'))
@@ -17,6 +33,9 @@ sys.path.append(os.path.join(os.path.dirname(__file__), 'python'))
 PRIVATE_YAML_PATH = os.getenv('PRIVATE_YAML_PATH', 'private.yaml')
 COMMANDS_YAML_PATH = os.getenv('COMMANDS_YAML_PATH', 'commands.yaml')
 
+print(f"PRIVATE_YAML_PATH: {PRIVATE_YAML_PATH}")  # Debug print
+print(f"COMMANDS_YAML_PATH: {COMMANDS_YAML_PATH}")  # Debug print
+
 # Load configuration
 commands_data = None
 service_config = None
@@ -24,24 +43,25 @@ classes_and_objects = None
 aliases = None
 converters = None
 
-# Data storage
-saved_data = {}
-
 def load_yaml(file_path):
+    print(f"Loading YAML file: {file_path}")  # Debug print
     with open(file_path, 'r') as file:
         return yaml.safe_load(file)
 
 def list_classes_and_objects():
+    print("Listing classes and objects")  # Debug print
     classes_and_objects = {}
     python_dir = os.path.join(os.path.dirname(__file__), 'python')
     
     for filename in os.listdir(python_dir):
         if filename.endswith('.py') and not filename.startswith('__'):
             module_name = filename[:-3]
+            print(f"Importing module: {module_name}")  # Debug print
             module = importlib.import_module(module_name)
             
             for name, obj in inspect.getmembers(module):
                 if inspect.isclass(obj) and obj.__module__ == module_name:
+                    print(f"Found class: {name}")  # Debug print
                     classes_and_objects[name] = {
                         'class': obj,
                         'methods': {method_name.lower(): method_obj for method_name, method_obj in inspect.getmembers(obj) if inspect.isfunction(method_obj) or inspect.ismethod(method_obj)}
@@ -127,10 +147,10 @@ def print_value(data, value_key, filter_key, filter_value):
         print(f"No data found matching the filter: {filter_key}={filter_value}")
 
 def execute_command(command, classes_and_objects, service_config):
-    global saved_data
+    print(f"Executing command: {command}")  # Debug print
     parts = shlex.split(command)
     if len(parts) < 2:
-        print(f"Error: Invalid command format: {command}")
+        logger.error(f"Invalid command format: {command}")
         return
 
     action = parts[0].lower()
@@ -139,18 +159,25 @@ def execute_command(command, classes_and_objects, service_config):
         data_key = parts[1]
         filter_key = parts[2]
         filter_value = parts[3]
-        if data_key in saved_data:
-            saved_data[data_key] = filter_data(saved_data[data_key], filter_key, filter_value)
-            print(f"Filtered data saved to '{data_key}'")
+        service_name, method_name = data_key.split('_', 1)
+        data = get_latest_result(service_name, method_name)
+        if data:
+            filtered_data = filter_data(data, filter_key, filter_value)
+            save_result(service_name, method_name, filtered_data)
+            logger.info(f"Filtered data saved for '{data_key}'")
         else:
-            print(f"Error: No data found with key '{data_key}'")
+            logger.error(f"No data found with key '{data_key}'")
         return
     elif action == 'print' and parts[1] == 'value':
         # Handle print value command
         value_key = parts[2]
         filter_key, filter_value = parts[4].split('=')
-        last_saved_key = list(saved_data.keys())[-1]
-        print_value(saved_data[last_saved_key], value_key, filter_key, filter_value)
+        service_name, method_name = parts[-1].split('_', 1)
+        data = get_latest_result(service_name, method_name)
+        if data:
+            print_value(data, value_key, filter_key, filter_value)
+        else:
+            logger.error(f"No data found for {service_name}_{method_name}")
         return
 
     method_parts = []
@@ -162,7 +189,7 @@ def execute_command(command, classes_and_objects, service_config):
         method_parts.append(part)
 
     if not account_alias:
-        print(f"Error: Invalid account alias in command: {command}")
+        logger.error(f"Invalid account alias in command: {command}")
         return
 
     method_name = '_'.join(method_parts).lower()
@@ -170,7 +197,7 @@ def execute_command(command, classes_and_objects, service_config):
     service_name = service_info['service']
 
     if service_name not in classes_and_objects:
-        print(f"Error: Invalid service name: {service_name}")
+        logger.error(f"Invalid service name: {service_name}")
         return
 
     service_class = classes_and_objects[service_name]['class']
@@ -180,11 +207,11 @@ def execute_command(command, classes_and_objects, service_config):
     try:
         instance = service_class(**constructor_args)
     except TypeError as e:
-        print(f"Error creating {service_name} instance: {str(e)}")
+        logger.error(f"Error creating {service_name} instance: {str(e)}")
         return
 
     if method_name not in classes_and_objects[service_name]['methods']:
-        print(f"Error: Method {method_name} not found in class {service_name}.")
+        logger.error(f"Method {method_name} not found in class {service_name}.")
         return
 
     method = classes_and_objects[service_name]['methods'][method_name]
@@ -194,14 +221,13 @@ def execute_command(command, classes_and_objects, service_config):
 
     try:
         result = method(instance, **method_args)
-        print(f"Result of {service_name}.{method_name}: {result}")
+        logger.info(f"Result of {service_name}.{method_name}: {result}")
         
-        # Save the result
-        save_key = f"{service_name}_{method_name}"
-        saved_data[save_key] = result
-        print(f"Data saved with key: {save_key}")
+        # Save the result to the database
+        save_result(service_name, method_name, result)
+        logger.info(f"Data saved for {service_name}.{method_name}")
     except Exception as e:
-        print(f"Error executing {service_name}.{method_name}: {str(e)}")
+        logger.error(f"Error executing {service_name}.{method_name}: {str(e)}")
 
 def main():
     global commands_data, service_config, classes_and_objects, aliases, converters
@@ -209,25 +235,27 @@ def main():
     commands_data = load_yaml(COMMANDS_YAML_PATH)
     service_config = load_yaml(PRIVATE_YAML_PATH)
 
+    print(f"Service config: {service_config}")  # Debug print
+
     classes_and_objects = list_classes_and_objects()
 
-    print("Available modules and methods:")
+    logger.info("Available modules and methods:")
     for class_name, class_info in classes_and_objects.items():
-        print(f"\nClass: {class_name}")
-        print("  Methods:")
+        logger.info(f"\nClass: {class_name}")
+        logger.info("  Methods:")
         for method_name, method_obj in class_info['methods'].items():
-            print(f"    - {method_name}")
-            print(f"      {inspect.signature(method_obj)}")
+            logger.info(f"    - {method_name}")
+            logger.info(f"      {inspect.signature(method_obj)}")
 
     aliases = commands_data['commands']['python'].get('alias', {})
     converters = commands_data['commands']['python'].get('convert', {}).get('param', {})
     
-    print("\nExecuting commands:")
+    logger.info("\nExecuting commands:")
     for command in commands_data['commands']['python']['sentence']:
         replaced_command = replace_aliases(command, aliases, converters)
-        print(f"\nRUN: {command}")
+        logger.info(f"\nRUN: {command}")
         if replaced_command != command:
-            print(f"Replaced: {replaced_command}")
+            logger.info(f"Replaced: {replaced_command}")
         execute_command(replaced_command, classes_and_objects, service_config)
 
 if __name__ == "__main__":

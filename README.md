@@ -10,19 +10,21 @@ _   _             _____ _
 
 ![NonFlow Logo](logo/nonflow.svg)
 
-This project implements a flexible command runner system that dynamically loads and executes commands from a YAML file. It includes functionality for interacting with various services such as Cloudflare, GitLab, GitHub, and Plesk.
+This project implements a flexible command runner system that dynamically loads and executes commands from a YAML file. It includes functionality for interacting with various services such as Cloudflare, GitLab, GitHub, and Plesk, and stores the results in a SQLite database.
 
 ## Project Structure
 
 The project consists of the following main components:
 
 1. `runner.py`: The main script that loads commands from a YAML file and executes them.
-2. `python/`: Directory containing service classes (e.g., CloudflareService, GitLabService, GitHubService, PleskService).
-3. `commands.yaml`: Contains the list of commands to be executed by the runner.
-4. `.private`: Stores sensitive information like API keys and tokens.
-5. `.env`: Contains environment variables for configuring file paths.
-6. `requirements.txt`: Lists the Python dependencies for the project.
-7. `logo/`: Directory containing logo files for the project.
+2. `runnerdb.py`: Handles database operations for storing and retrieving command results.
+3. `python/`: Directory containing service classes (e.g., CloudflareService, GitLabService, GitHubService, PleskService).
+4. `commands.yaml`: Contains the list of commands to be executed by the runner.
+5. `.private`: Stores sensitive information like API keys and tokens.
+6. `.env`: Contains environment variables for configuring file paths, database settings, and logging.
+7. `requirements.txt`: Lists the Python dependencies for the project.
+8. `logo/`: Directory containing logo files for the project.
+9. `.logs`: Log file containing detailed execution logs.
 
 ## How It Works
 
@@ -33,8 +35,15 @@ The project consists of the following main components:
    - Dynamically imports and recognizes all service classes in the `python/` directory.
    - Lists available classes and their methods.
    - Executes the commands specified in the YAML file.
+   - Stores the results of each command in the SQLite database.
+   - Logs detailed information about the execution process to the `.logs` file.
 
 2. Each service class provides methods for interacting with their respective APIs.
+
+3. The `runnerdb.py` script handles all database operations, including:
+   - Initializing the database and creating necessary tables.
+   - Saving command results to the database.
+   - Retrieving the latest results for a given service and method.
 
 ## Command Structure
 
@@ -73,14 +82,43 @@ Each account alias contains the service class name and the necessary credentials
 
 ## Environment Variables
 
-The `.env` file is used to set the paths for the `.private` and `commands.yaml` files. It has the following structure:
+The `.env` file is used to set the paths for various configuration files and outputs. It has the following structure:
 
 ```
-PRIVATE_YAML_PATH=.private
+PRIVATE_YAML_PATH=.private/service.yaml
 COMMANDS_YAML_PATH=commands.yaml
+SQLITE_DB_PATH=runner.db
+LOG_FILE_PATH=.logs
 ```
 
-This allows you to easily change the location of these files without modifying the `runner.py` script.
+This allows you to easily change the location of these files and the database without modifying the `runner.py` script.
+
+## Database Usage
+
+The project uses a SQLite database to store the results of each command execution. The database operations are handled by the `runnerdb.py` script, which provides the following functionality:
+
+- Initializing the database and creating the necessary table.
+- Saving command results to the database.
+- Retrieving the latest result for a given service and method.
+
+The database stores the following information for each command execution:
+- Service name
+- Method name
+- Result (stored as a JSON string)
+- Timestamp of the execution
+
+This allows for easy retrieval and analysis of past command executions.
+
+## Logging
+
+The project now uses a dedicated log file (`.logs`) to store detailed information about the execution process. This includes:
+
+- Information about available modules and methods
+- Execution of each command
+- Results of command executions
+- Any errors or exceptions that occur during the process
+
+The log file provides a comprehensive record of the runner's activities, which can be invaluable for debugging and auditing purposes.
 
 ## Usage
 
@@ -123,24 +161,27 @@ To start a new project:
 
 4. Create your `.private` file and add your actual API keys and tokens.
 
-5. Set up your `.env` file with the correct paths for `.private` and `commands.yaml`.
+5. Set up your `.env` file with the correct paths for `.private`, `commands.yaml`, the SQLite database, and the log file.
 
 6. Run the runner:
    ```
    python runner.py
    ```
 
+7. Check the `.logs` file for detailed execution information.
+
 ## Dependencies
 
 - PyYAML: Used for parsing YAML files.
 - Requests: Used for making HTTP requests to APIs.
 - python-dotenv: Used for loading environment variables from .env file.
+- sqlite3: Used for database operations (part of Python standard library).
 
 ## Configuration
 
 1. Modify the `commands.yaml` file to include the commands you want to execute, using appropriate account aliases.
 2. Update the `.private` file with your actual credentials for each service and account.
-3. Set up the `.env` file with the correct paths for `.private` and `commands.yaml`.
+3. Set up the `.env` file with the correct paths for `.private`, `commands.yaml`, the SQLite database, and the log file.
 
 ## Extending the Project
 
@@ -156,6 +197,18 @@ To add a new service:
 The runner will automatically detect and make available your new service.
 
 ## Recent Updates
+
+### Logging Enhancements
+
+- Added a dedicated log file (`.logs`) to store detailed execution information.
+- Updated the `.env` file to include the `LOG_FILE_PATH` variable.
+- Modified `runner.py` to use the new logging configuration.
+
+### Database Integration
+
+- Added SQLite database functionality to store command execution results.
+- Implemented `runnerdb.py` to handle database operations.
+- Updated `runner.py` to use the database for storing and retrieving command results.
 
 ### PleskService Improvements
 
@@ -189,17 +242,6 @@ commands:
       - list repositories github_main  # Lists all repositories (same as list all repositories)
       - create issue github_main repo_owner=owner repo_name=repo title="New Issue" body="This is a test issue"
 ```
-
-### Logging
-
-Logging has been implemented in both PleskService and GitHubService classes. To view more detailed logs, you can adjust the logging level in your Python script or environment. For example:
-
-```python
-import logging
-logging.basicConfig(level=logging.DEBUG)
-```
-
-This will show more detailed log messages, which can be helpful for troubleshooting.
 
 ## License
 

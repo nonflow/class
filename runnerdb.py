@@ -1,10 +1,14 @@
 import sqlite3
 import json
 import os
+import logging
 from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 # Get the database path from the environment variable
 DB_PATH = os.getenv('SQLITE_DB_PATH', 'runner.db')
@@ -24,6 +28,7 @@ def init_db():
     ''')
     conn.commit()
     conn.close()
+    logger.debug("Database initialized")
 
 def save_result(service_name, method_name, result):
     """Save the result of a query to the database."""
@@ -41,6 +46,7 @@ def save_result(service_name, method_name, result):
     
     conn.commit()
     conn.close()
+    logger.debug(f"Result saved for {service_name}.{method_name}")
 
 def get_latest_result(service_name, method_name):
     """Retrieve the latest result for a given service and method."""
@@ -62,6 +68,7 @@ def get_latest_result(service_name, method_name):
             return json.loads(result[0])
         except json.JSONDecodeError:
             return result[0]
+    logger.debug(f"Retrieved latest result for {service_name}.{method_name}")
     return None
 
 # Initialize the database when this module is imported

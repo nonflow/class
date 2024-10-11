@@ -14,6 +14,6 @@ github_main:
 
 plesk_main:
   service: PleskService
-  host: your_actual_plesk_host
+  host: localhost  # Replace with actual Plesk hostname or IP if different
   username: your_actual_username
   password: your_actual_password

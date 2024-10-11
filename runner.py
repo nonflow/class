@@ -14,17 +14,28 @@ load_dotenv()
 
 # Configure logging
 LOG_FILE = os.getenv('LOG_FILE_PATH', '.logs')
-print(f"Log file path: {LOG_FILE}")  # Debug print
+DEBUG_MODE = os.getenv('DEBUG_MODE', '0') == '1'
+DEBUG_LEVEL = os.getenv('DEBUG_LEVEL', 'INFO,WARNING,ERROR').split(',')
+
+logging_level = logging.DEBUG if DEBUG_MODE else logging.INFO
 
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging_level,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     filename=LOG_FILE,
     filemode='a'
 )
-logger = logging.getLogger(__name__)
 
-print("Logging configured")  # Debug print
+# Create a stream handler for console output
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging_level)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+console_handler.setFormatter(formatter)
+
+# Add the console handler to the root logger
+logging.getLogger('').addHandler(console_handler)
+
+logger = logging.getLogger(__name__)
 
 # Add the 'python' directory to the Python path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'python'))
@@ -33,8 +44,8 @@ sys.path.append(os.path.join(os.path.dirname(__file__), 'python'))
 PRIVATE_YAML_PATH = os.getenv('PRIVATE_YAML_PATH', 'private.yaml')
 COMMANDS_YAML_PATH = os.getenv('COMMANDS_YAML_PATH', 'commands.yaml')
 
-print(f"PRIVATE_YAML_PATH: {PRIVATE_YAML_PATH}")  # Debug print
-print(f"COMMANDS_YAML_PATH: {COMMANDS_YAML_PATH}")  # Debug print
+logger.debug(f"PRIVATE_YAML_PATH: {PRIVATE_YAML_PATH}")
+logger.debug(f"COMMANDS_YAML_PATH: {COMMANDS_YAML_PATH}")
 
 # Load configuration
 commands_data = None
@@ -44,24 +55,24 @@ aliases = None
 converters = None
 
 def load_yaml(file_path):
-    print(f"Loading YAML file: {file_path}")  # Debug print
+    logger.debug(f"Loading YAML file: {file_path}")
     with open(file_path, 'r') as file:
         return yaml.safe_load(file)
 
 def list_classes_and_objects():
-    print("Listing classes and objects")  # Debug print
+    logger.debug("Listing classes and objects")
     classes_and_objects = {}
     python_dir = os.path.join(os.path.dirname(__file__), 'python')
     
     for filename in os.listdir(python_dir):
         if filename.endswith('.py') and not filename.startswith('__'):
             module_name = filename[:-3]
-            print(f"Importing module: {module_name}")  # Debug print
+            logger.debug(f"Importing module: {module_name}")
             module = importlib.import_module(module_name)
             
             for name, obj in inspect.getmembers(module):
                 if inspect.isclass(obj) and obj.__module__ == module_name:
-                    print(f"Found class: {name}")  # Debug print
+                    logger.debug(f"Found class: {name}")
                     classes_and_objects[name] = {
                         'class': obj,
                         'methods': {method_name.lower(): method_obj for method_name, method_obj in inspect.getmembers(obj) if inspect.isfunction(method_obj) or inspect.ismethod(method_obj)}
@@ -147,7 +158,7 @@ def print_value(data, value_key, filter_key, filter_value):
         print(f"No data found matching the filter: {filter_key}={filter_value}")
 
 def execute_command(command, classes_and_objects, service_config):
-    print(f"Executing command: {command}")  # Debug print
+    logger.info(f"Executing command: {command}")
     parts = shlex.split(command)
     if len(parts) < 2:
         logger.error(f"Invalid command format: {command}")
@@ -235,7 +246,7 @@ def main():
     commands_data = load_yaml(COMMANDS_YAML_PATH)
     service_config = load_yaml(PRIVATE_YAML_PATH)
 
-    print(f"Service config: {service_config}")  # Debug print
+    logger.debug(f"Service config: {service_config}")
 
     classes_and_objects = list_classes_and_objects()
 

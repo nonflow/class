@@ -6,10 +6,11 @@ import shlex
 import os
 import json
 import logging
+from datetime import datetime
 import sqlite3
 import xml.etree.ElementTree as ET
 from dotenv import load_dotenv
-from runnerdb import save_result, get_latest_result, DB_PATH
+from runnerdb import save_result, get_latest_result, DB_PATH, add_scheduled_task
 
 # Load environment variables from .env file
 load_dotenv()
@@ -18,8 +19,23 @@ load_dotenv()
 LOG_FILE = os.getenv('LOG_FILE_PATH', '.logs')
 DEBUG_MODE = os.getenv('DEBUG_MODE', '0') == '1'
 DEBUG_LEVEL = os.getenv('DEBUG_LEVEL', 'INFO,WARNING,ERROR').split(',')
+REMOVE_LOGS_AFTER = int(os.getenv('REMOVE_LOGS_AFTER', '0'))
 
 logging_level = logging.DEBUG if DEBUG_MODE else logging.INFO
+
+def manage_log_file():
+    if REMOVE_LOGS_AFTER == 1:
+        if os.path.exists(LOG_FILE):
+            os.remove(LOG_FILE)
+        print(f"Log file {LOG_FILE} has been removed.")
+    elif REMOVE_LOGS_AFTER > 1:
+        if os.path.exists(LOG_FILE):
+            file_age = datetime.now() - datetime.fromtimestamp(os.path.getmtime(LOG_FILE))
+            if file_age.days >= REMOVE_LOGS_AFTER:
+                os.remove(LOG_FILE)
+                print(f"Log file {LOG_FILE} has been removed as it was older than {REMOVE_LOGS_AFTER} days.")
+
+manage_log_file()
 
 logging.basicConfig(
     level=logging_level,
@@ -59,6 +75,14 @@ def load_yaml(file_path):
     logger.debug(f"Loading YAML file: {file_path}")
     with open(file_path, 'r') as file:
         return yaml.safe_load(file)
+
+def process_scheduled_tasks(scheduled_tasks):
+    logger.info("Processing scheduled tasks")
+    for task in scheduled_tasks:
+        command = task['command']
+        schedule = task['cron']
+        logger.info(f"Adding scheduled task: {command} with schedule: {schedule}")
+        add_scheduled_task(command, schedule)
 
 def list_classes_and_objects():
     logger.debug("Listing classes and objects")
@@ -327,7 +351,11 @@ def main():
     
     # Create json_result view
     create_json_result_view()
-    
+
+    # Process scheduled tasks
+    scheduled_tasks = commands_data['commands']['python'].get('schedule', [])
+    process_scheduled_tasks(scheduled_tasks)
+
     logger.info("\nExecuting commands:")
     for command in commands_data['commands']['python']['sentence']:
         replaced_command = replace_aliases(command, aliases, converters)
@@ -338,3 +366,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

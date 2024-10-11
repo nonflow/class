@@ -20,7 +20,7 @@ commands:
       
       # Plesk
 #      - list domains plesk_main
-      #      - create database plesk_main webspace_name=example.com db_name=mydb db_user=dbuser db_password=dbpass
+#      - create database plesk_main webspace_name=example.com db_name=mydb db_user=dbuser db_password=dbpass
 
       # Email
       - send email softreck to_email=tom@sapletta.com subject="Test Email" body="This is a test email sent from the command runner."
@@ -45,6 +45,13 @@ commands:
 #               substr(result, instr(result, '<name>') + 6, instr(substr(result, instr(result, '<name>') + 6), '</name>') - 1) as domain_name
 #        FROM query
 #        WHERE method_name = 'list_domains'
+
+    schedule:
+      # Scheduled tasks
+      - command: "list zones cloudflare_main"
+        cron: "0 0 * * *"  # Run daily at midnight
+      - command: "send email softreck to_email=tom@sapletta.com subject='Daily Report' body='This is your daily report.'"
+        cron: "0 9 * * *"  # Run daily at 9 AM
 
     alias:
       param:

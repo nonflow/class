@@ -174,7 +174,7 @@ def execute_command(command, classes_and_objects, service_config):
         data = get_latest_result(service_name, method_name)
         if data:
             filtered_data = filter_data(data, filter_key, filter_value)
-            save_result(service_name, method_name, filtered_data)
+            save_result(command, 'name', service_name, method_name, filtered_data)
             logger.info(f"Filtered data saved for '{data_key}'")
         else:
             logger.error(f"No data found with key '{data_key}'")
@@ -205,6 +205,9 @@ def execute_command(command, classes_and_objects, service_config):
 
     method_name = '_'.join(method_parts).lower()
     service_info = service_config[account_alias]
+#     logger.info(f"--account alias: {account_alias}")
+#     exit(0)
+
     service_name = service_info['service']
 
     if service_name not in classes_and_objects:
@@ -235,7 +238,7 @@ def execute_command(command, classes_and_objects, service_config):
         logger.info(f"Result of {service_name}.{method_name}: {result}")
         
         # Save the result to the database
-        save_result(service_name, method_name, result)
+        save_result(command, account_alias, service_name, method_name, result)
         logger.info(f"Data saved for {service_name}.{method_name}")
     except Exception as e:
         logger.error(f"Error executing {service_name}.{method_name}: {str(e)}")

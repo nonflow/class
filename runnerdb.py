@@ -20,6 +20,8 @@ def init_db():
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS query_results (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        command TEXT,
+        name TEXT,
         service_name TEXT,
         method_name TEXT,
         result TEXT,
@@ -30,7 +32,7 @@ def init_db():
     conn.close()
     logger.debug("Database initialized")
 
-def save_result(service_name, method_name, result):
+def save_result(command, name, service_name, method_name, result):
     """Save the result of a query to the database."""
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
@@ -40,9 +42,9 @@ def save_result(service_name, method_name, result):
         result = json.dumps(result)
     
     cursor.execute('''
-    INSERT INTO query_results (service_name, method_name, result)
-    VALUES (?, ?, ?)
-    ''', (service_name, method_name, result))
+    INSERT INTO query_results (command, name, service_name, method_name, result)
+    VALUES (?, ?, ?, ?, ?)
+    ''', (command, name, service_name, method_name, result))
     
     conn.commit()
     conn.close()

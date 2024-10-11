@@ -4,6 +4,7 @@ import yaml
 import sys
 import shlex
 import os
+import json
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -22,6 +23,9 @@ service_config = None
 classes_and_objects = None
 aliases = None
 converters = None
+
+# Data storage
+saved_data = {}
 
 def load_yaml(file_path):
     with open(file_path, 'r') as file:
@@ -103,10 +107,50 @@ def parse_command_args(args):
 
     return parsed_args
 
+def filter_data(data, filter_key, filter_value):
+    if isinstance(data, list):
+        return [item for item in data if str(item.get(filter_key, '')).lower() == str(filter_value).lower()]
+    elif isinstance(data, dict):
+        return {k: v for k, v in data.items() if str(v.get(filter_key, '')).lower() == str(filter_value).lower()}
+    else:
+        return data
+
+def print_value(data, value_key, filter_key, filter_value):
+    filtered_data = filter_data(data, filter_key, filter_value)
+    if filtered_data:
+        if isinstance(filtered_data, list):
+            for item in filtered_data:
+                print(f"{value_key}: {item.get(value_key, 'Not found')}")
+        elif isinstance(filtered_data, dict):
+            print(f"{value_key}: {filtered_data.get(value_key, 'Not found')}")
+    else:
+        print(f"No data found matching the filter: {filter_key}={filter_value}")
+
 def execute_command(command, classes_and_objects, service_config):
+    global saved_data
     parts = shlex.split(command)
     if len(parts) < 2:
         print(f"Error: Invalid command format: {command}")
+        return
+
+    action = parts[0].lower()
+    if action == 'filter':
+        # Handle filter command
+        data_key = parts[1]
+        filter_key = parts[2]
+        filter_value = parts[3]
+        if data_key in saved_data:
+            saved_data[data_key] = filter_data(saved_data[data_key], filter_key, filter_value)
+            print(f"Filtered data saved to '{data_key}'")
+        else:
+            print(f"Error: No data found with key '{data_key}'")
+        return
+    elif action == 'print' and parts[1] == 'value':
+        # Handle print value command
+        value_key = parts[2]
+        filter_key, filter_value = parts[4].split('=')
+        last_saved_key = list(saved_data.keys())[-1]
+        print_value(saved_data[last_saved_key], value_key, filter_key, filter_value)
         return
 
     method_parts = []
@@ -151,6 +195,11 @@ def execute_command(command, classes_and_objects, service_config):
     try:
         result = method(instance, **method_args)
         print(f"Result of {service_name}.{method_name}: {result}")
+        
+        # Save the result
+        save_key = f"{service_name}_{method_name}"
+        saved_data[save_key] = result
+        print(f"Data saved with key: {save_key}")
     except Exception as e:
         print(f"Error executing {service_name}.{method_name}: {str(e)}")
 

@@ -10,7 +10,9 @@ commands:
 #      - create issue gitlab_main project_id=123 title="New Issue" description="This is a test issue"
       
       # GitHub
-      - list repositories github_main
+#      - list repositories github_main filter_key=name filter_value=logo
+      - list all repositories github_main
+      - print value ssh_url where name=logo
 #      - create issue github_main repo_owner=owner repo_name=repo title="New Issue" body="This is a test issue"
       
       # Plesk
@@ -21,6 +23,7 @@ commands:
       param:
         from: from_date
         to: to_date
+        by: filter_key
     convert:
       param:
         today: date_converters.current_date

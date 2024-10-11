@@ -169,21 +169,25 @@ The PleskService class has been updated to address some issues:
 
 The GitHubService class has been updated with the following improvements:
 
-1. The `list_repositories` method now supports more flexible filtering:
+1. A new `list_all_repositories` method has been added to fetch all repositories without filtering.
+2. The `list_repositories` method now supports flexible filtering:
    - You can specify a `filter_key` (default is 'name') and a `filter_value`.
    - Filtering is case-insensitive.
    - If no filter is applied, all repositories are returned.
-2. Error handling and logging have been added to both `list_repositories` and `create_issue` methods.
-3. Docstrings have been added to improve documentation.
+3. Error handling and logging have been added to all methods.
+4. A private `_get_repositories` method has been introduced to reduce code duplication.
+5. Docstrings have been added to improve documentation.
 
-To use the updated `list_repositories` method in your `commands.yaml`:
+To use the updated GitHubService methods in your `commands.yaml`:
 
 ```yaml
 commands:
   python:
     sentence:
+      - list all repositories github_main
       - list repositories github_main filter_key=name filter_value=myrepo
-      - list repositories github_main  # Lists all repositories
+      - list repositories github_main  # Lists all repositories (same as list all repositories)
+      - create issue github_main repo_owner=owner repo_name=repo title="New Issue" body="This is a test issue"
 ```
 
 ### Logging

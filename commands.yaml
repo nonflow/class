@@ -1,39 +1,21 @@
 commands:
   python:
     sentence:
-      # Email services
-      - connect GmailService username=user@gmail.com password=password123
-      - create Message to_email=recipient@example.com subject="Test Email" content="This is a test email."
-      - connect OutlookService username=user@outlook.com password=password123
-      - create Message to_email=recipient@example.com subject="Test Email" content="This is a test email."
-      
       # Cloudflare
-      - connect CloudflareService api_key=your_api_key email=your_email@example.com
-      - list Message service=cloudflare
-      - purge_cache Message zone_id=your_zone_id
+      - list zones CloudflareService api_key=your_api_key email=your_email@example.com
+      - purge cache CloudflareService api_key=your_api_key email=your_email@example.com zone_id=your_zone_id
       
       # GitLab
-      - connect GitLabService base_url=https://gitlab.com private_token=your_private_token
-      - list Message service=gitlab
-      - create_issue Message service=gitlab project_id=123 title="New Issue" description="This is a test issue"
+      - list projects GitLabService base_url=https://gitlab.com private_token=your_private_token
+      - create issue GitLabService base_url=https://gitlab.com private_token=your_private_token project_id=123 title="New Issue" description="This is a test issue"
       
       # GitHub
-      - connect GitHubService access_token=your_access_token
-      - list Message service=github
-      - create_issue Message service=github repo_owner=owner repo_name=repo title="New Issue" body="This is a test issue"
+      - list repositories GitHubService access_token=your_access_token
+      - create issue GitHubService access_token=your_access_token repo_owner=owner repo_name=repo title="New Issue" body="This is a test issue"
       
       # Plesk
-      - connect PleskService host=your_plesk_host username=admin password=admin_password
-      - list Message service=plesk
-      - create_database Message webspace_name=example.com db_name=mydb db_user=dbuser db_password=dbpass
-      
-      # Disconnect
-      - disconnect GmailService username=user@gmail.com
-      - disconnect OutlookService username=user@outlook.com
-      - disconnect CloudflareService email=your_email@example.com
-      - disconnect GitLabService base_url=https://gitlab.com
-      - disconnect GitHubService username=repo_owner
-      - disconnect PleskService host=your_plesk_host
+      - list domains PleskService host=your_plesk_host username=admin password=admin_password
+      - create database PleskService host=your_plesk_host username=admin password=admin_password webspace_name=example.com db_name=mydb db_user=dbuser db_password=dbpass
 
     alias:
       param:

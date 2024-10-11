@@ -13,19 +13,16 @@ def load_yaml(file_path):
         return yaml.safe_load(file)
 
 def list_classes_and_objects():
-    modules = ['Account', 'Message', 'email_service', 'cloudflare_service', 'gitlab_service', 'github_service', 'plesk_service']
     classes_and_objects = {}
-
-    for module_name in modules:
-        module = importlib.import_module(module_name)
-        classes_and_objects[module_name] = {
-            'class': None,
-            'methods': {}
-        }
-
-        for name, obj in inspect.getmembers(module):
-            if inspect.isclass(obj):
-                if name == module_name.split('_')[0].capitalize() or name in ['GmailService', 'OutlookService', 'CloudflareService', 'GitLabService', 'GitHubService', 'PleskService']:
+    python_dir = os.path.join(os.path.dirname(__file__), 'python')
+    
+    for filename in os.listdir(python_dir):
+        if filename.endswith('.py') and not filename.startswith('__'):
+            module_name = filename[:-3]
+            module = importlib.import_module(module_name)
+            
+            for name, obj in inspect.getmembers(module):
+                if inspect.isclass(obj) and obj.__module__ == module_name:
                     classes_and_objects[name] = {
                         'class': obj,
                         'methods': {method_name.lower(): method_obj for method_name, method_obj in inspect.getmembers(obj) if inspect.isfunction(method_obj) or inspect.ismethod(method_obj)}
@@ -91,37 +88,52 @@ def parse_command_args(args):
 
     return parsed_args
 
-def execute_command(command, classes_and_objects, account_instance):
+def execute_command(command, classes_and_objects):
     parts = shlex.split(command)
     if len(parts) < 2:
         print(f"Error: Invalid command format: {command}")
         return
 
-    method_name, module_name = parts[0].lower(), parts[1]
+    method_parts = []
+    service_name = None
+    for part in parts:
+        if part in classes_and_objects:
+            service_name = part
+            break
+        method_parts.append(part)
+
+    if not service_name:
+        print(f"Error: Invalid service name in command: {command}")
+        return
+
+    method_name = '_'.join(method_parts).lower()
     
-    if module_name == 'Account':
-        instance = account_instance
-    elif module_name == 'Message':
-        instance = classes_and_objects['Message']['class'](account_instance)
-    elif module_name in ['GmailService', 'OutlookService', 'CloudflareService', 'GitLabService', 'GitHubService', 'PleskService']:
-        # For service-specific commands, we use the Account instance's connect method
-        return account_instance.connect(module_name, **parse_command_args(parts[2:]))
-    else:
-        print(f"Error: Invalid module {module_name}.")
+    service_class = classes_and_objects[service_name]['class']
+    all_args = parse_command_args(parts[len(method_parts)+1:])
+
+    # Separate constructor args from method args
+    constructor_params = inspect.signature(service_class.__init__).parameters
+    constructor_args = {k: v for k, v in all_args.items() if k in constructor_params}
+    method_args = {k: v for k, v in all_args.items() if k not in constructor_params}
+
+    # Create an instance of the service
+    try:
+        instance = service_class(**constructor_args)
+    except TypeError as e:
+        print(f"Error creating {service_name} instance: {str(e)}")
         return
 
-    if method_name not in classes_and_objects[module_name]['methods']:
-        print(f"Error: Method {method_name} not found in class {module_name}.")
+    if method_name not in classes_and_objects[service_name]['methods']:
+        print(f"Error: Method {method_name} not found in class {service_name}.")
         return
 
-    method = classes_and_objects[module_name]['methods'][method_name]
-    method_args = parse_command_args(parts[2:])
+    method = classes_and_objects[service_name]['methods'][method_name]
 
     try:
         result = method(instance, **method_args)
-        print(f"Result of {module_name}.{method_name}: {result}")
+        print(f"Result of {service_name}.{method_name}: {result}")
     except Exception as e:
-        print(f"Error executing {module_name}.{method_name}: {str(e)}")
+        print(f"Error executing {service_name}.{method_name}: {str(e)}")
 
 def main():
     if len(sys.argv) != 2:
@@ -133,20 +145,16 @@ def main():
 
     classes_and_objects = list_classes_and_objects()
 
-    print(classes_and_objects)
     print("Available modules and methods:")
-    for module_name, module_info in classes_and_objects.items():
-        print(f"\nModule: {module_name}")
-        print("  Class:", module_info['class'].__name__ if module_info['class'] else "Not found")
+    for class_name, class_info in classes_and_objects.items():
+        print(f"\nClass: {class_name}")
         print("  Methods:")
-        for method_name, method_obj in module_info['methods'].items():
+        for method_name, method_obj in class_info['methods'].items():
             print(f"    - {method_name}")
             print(f"      {inspect.signature(method_obj)}")
 
     aliases = commands_data['commands']['python'].get('alias', {})
     converters = commands_data['commands']['python'].get('convert', {}).get('param', {})
-    
-    account_instance = classes_and_objects['Account']['class']()
     
     print("\nExecuting commands:")
     for command in commands_data['commands']['python']['sentence']:
@@ -154,7 +162,7 @@ def main():
         print(f"\nRUN: {command}")
         if replaced_command != command:
             print(f"Replaced: {replaced_command}")
-        execute_command(replaced_command, classes_and_objects, account_instance)
+        execute_command(replaced_command, classes_and_objects)
 
 if __name__ == "__main__":
     main()

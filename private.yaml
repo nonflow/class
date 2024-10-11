@@ -1,27 +1,33 @@
 GmailService:
-  smtp_server: smtp.gmail.com
-  smtp_port: 587
-  username: your_gmail@gmail.com
-  password: your_gmail_password
+  your_gmail:
+    smtp_server: smtp.gmail.com
+    smtp_port: 587
+    username: your_gmail@gmail.com
+    password: your_gmail_password
 
 OutlookService:
-  smtp_server: smtp-mail.outlook.com
-  smtp_port: 587
-  username: your_outlook@outlook.com
-  password: your_outlook_password
+  your_outlook:
+    smtp_server: smtp-mail.outlook.com
+    smtp_port: 587
+    username: your_outlook@outlook.com
+    password: your_outlook_password
 
 CloudflareService:
-  api_key: your_cloudflare_api_key
-  email: your_cloudflare_email@example.com
+  your_cloudflare_email:
+    api_key: your_cloudflare_api_key
+    email: your_cloudflare_email@example.com
 
 GitLabService:
-  base_url: https://gitlab.com
-  private_token: your_gitlab_private_token
+  my_username:
+    base_url: https://gitlab.com
+    private_token: your_gitlab_private_token
 
 GitHubService:
-  access_token: your_github_access_token
+  my_username:
+    access_token: your_github_access_token
 
 PleskService:
-  host: your_plesk_host.com
-  username: your_plesk_username
-  password: your_plesk_password
+  your_plesk_host:
+    host: your_plesk_host.com
+    username: your_plesk_username
+    password: your_plesk_password

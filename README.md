@@ -1,4 +1,14 @@
+```shell
+_   _             _____ _               
+| \ | |           |  ___| |              
+|  \| | ___  _ __ | |_  | | _____      __
+| . ` |/ _ \| '_ \|  _| | |/ _ \ \ /\ / /
+| |\  | (_) | | | | |   | | (_) \ V  V / 
+\_| \_/\___/|_| |_\_|   |_|\___/ \_/\_/  
+```
+
 # Command Runner Project
+![NonFlow Logo](logo/nonflow.svg)
 
 This project implements a flexible command runner system that dynamically loads and executes commands from a YAML file. It includes functionality for managing accounts and messages, with support for command aliases.
 
@@ -17,6 +27,9 @@ The project consists of the following main components:
 9. `runner.md`: Additional documentation for the runner script.
 10. `test_runner.py`: Contains unit tests for the runner script.
 11. `test_runner.md`: Documentation for the test runner.
+12. `logo/`: Directory containing logo files for the project.
+    - `nonflow.txt`: Contains the ASCII art logo for the project.
+    - `nonflow.svg`: Vector graphics version of the NonFlow logo.
 
 ## How It Works
 

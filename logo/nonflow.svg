@@ -1,0 +1,8 @@
+<svg width="300" height="100" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .text { font: bold 40px sans-serif; fill: #333; }
+    .highlight { fill: #0066cc; }
+  </style>
+  <rect width="100%" height="100%" fill="#f0f0f0"/>
+  <text x="10" y="60" class="text">Non<tspan class="highlight">Flow</tspan></text>
+</svg>

@@ -9,6 +9,7 @@ load_dotenv()
 
 # Configure logging
 logger = logging.getLogger(__name__)
+QUERY_RESULTS_TABLE = "query"
 
 # Get the database path from the environment variable
 DB_PATH = os.getenv('SQLITE_DB_PATH', 'runner.db')
@@ -17,8 +18,8 @@ def init_db():
     """Initialize the database and create the necessary table if it doesn't exist."""
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    cursor.execute('''
-    CREATE TABLE IF NOT EXISTS query_results (
+    cursor.execute(f'''
+    CREATE TABLE IF NOT EXISTS {QUERY_RESULTS_TABLE} (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         command TEXT,
         name TEXT,
@@ -41,8 +42,8 @@ def save_result(command, name, service_name, method_name, result):
     if not isinstance(result, str):
         result = json.dumps(result)
     
-    cursor.execute('''
-    INSERT INTO query_results (command, name, service_name, method_name, result)
+    cursor.execute(f'''
+    INSERT INTO {QUERY_RESULTS_TABLE} (command, name, service_name, method_name, result)
     VALUES (?, ?, ?, ?, ?)
     ''', (command, name, service_name, method_name, result))
     
@@ -55,8 +56,8 @@ def get_latest_result(service_name, method_name):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     
-    cursor.execute('''
-    SELECT result FROM query_results
+    cursor.execute(f'''
+    SELECT result FROM {QUERY_RESULTS_TABLE}
     WHERE service_name = ? AND method_name = ?
     ORDER BY timestamp DESC
     LIMIT 1

@@ -1,5 +1,5 @@
 import requests
-import xml.etree.ElementTree as ET
+import json
 import warnings
 import logging
 
@@ -15,99 +15,97 @@ class PleskService:
         self.host = host
         self.username = username
         self.password = password
-        self.base_url = f"https://{host}:8443/enterprise/control/agent.php"
+        self.base_url = f"https://{host}:8443/api/v2"
+        self.api_key = self.generate_plesk_api_key()
 
-    def _create_auth_xml(self):
-        return f"""
-        <auth>
-            <login>{self.username}</login>
-            <password>{self.password}</password>
-        </auth>
-        """
-
-    def _send_request(self, xml_request):
+    def generate_plesk_api_key(self):
+        url = f"{self.base_url}/auth/keys"
         headers = {
-            "Content-Type": "text/xml",
-            "HTTP_PRETTY_PRINT": "TRUE",
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
         }
+        data = {}  # Empty JSON object as per the API documentation
+
         try:
             response = requests.post(
-                self.base_url,
+                url,
+                auth=(self.username, self.password),
                 headers=headers,
-                data=xml_request,
+                json=data,
+                verify=False  # Note: In production, you should verify SSL certificates
+            )
+            response.raise_for_status()
+            api_key = response.json().get('key')
+            if api_key:
+                logger.info("API key generated successfully")
+                return api_key
+            else:
+                logger.error("API key not found in the response")
+                return None
+        except requests.RequestException as e:
+            logger.error(f"Error generating API key: {e}")
+            return None
+
+    def _send_request(self, method, endpoint, data=None):
+        url = f"{self.base_url}/{endpoint}"
+        headers = {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-API-Key': self.api_key
+        }
+
+        try:
+            response = requests.request(
+                method,
+                url,
+                headers=headers,
+                json=data,
                 verify=False  # Note: In production, you should use proper SSL verification
             )
             response.raise_for_status()
-            logger.debug(f"XML Response: {response.content.decode('utf-8')}")
-            return ET.fromstring(response.content)
+            return response.json()
         except requests.RequestException as e:
             logger.error(f"Error sending request to Plesk: {e}")
             return None
 
     def list_domains(self):
         logger.info("Fetching list of domains from Plesk")
-        xml_request = f"""
-        <packet>
-            {self._create_auth_xml()}
-            <webspace>
-                <get>
-                    <filter/>
-                    <dataset>
-                        <gen_info/>
-                    </dataset>
-                </get>
-            </webspace>
-        </packet>
-        """
-        response = self._send_request(xml_request)
+        response = self._send_request('GET', 'domains')
         if response is None:
             logger.error("Failed to get response from Plesk server")
             return []
-        
-        domains = []
-        for domain in response.findall(".//name"):
-            domains.append(domain.text)
-        
+
+        domains = [domain['name'] for domain in response]
+
         if not domains:
             logger.info("No domains found in Plesk account")
         else:
             logger.info(f"Found {len(domains)} domains")
-        
+
         return domains
 
     def create_database(self, webspace_name, db_name, db_user, db_password):
         logger.info(f"Creating database {db_name} in webspace {webspace_name}")
-        xml_request = f"""
-        <packet>
-            {self._create_auth_xml()}
-            <database>
-                <add>
-                    <webspace-id>{webspace_name}</webspace-id>
-                    <name>{db_name}</name>
-                    <type>mysql</type>
-                    <db-server-id>localhost</db-server-id>
-                    <user>
-                        <name>{db_user}</name>
-                        <password>{db_password}</password>
-                    </user>
-                </add>
-            </database>
-        </packet>
-        """
-        response = self._send_request(xml_request)
+        data = {
+            "webspace": webspace_name,
+            "name": db_name,
+            "type": "mysql",
+            "server": "localhost",
+            "user": {
+                "name": db_user,
+                "password": db_password
+            }
+        }
+        response = self._send_request('POST', 'databases', data)
         if response is None:
             return "Failed to create database: No response from server"
-        
-        result = response.find(".//result")
-        if result is None:
-            logger.error(f"Unexpected response structure: {ET.tostring(response, encoding='unicode')}")
-            return "Failed to create database: Unexpected response structure"
-        
-        if result.get("code") == "ok":
+
+        if 'id' in response:
             logger.info(f"Database {db_name} created successfully")
             return "Database created successfully"
         else:
-            error_text = result.find(".//text")
-            error_message = error_text.text if error_text is not None else "Unknown error"
+            error_message = response.get('message', 'Unknown error')
             logger.error(f"Failed to create database: {error_message}")
             return f"Failed to create database: {error_message}"
+
+

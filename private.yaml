@@ -1,17 +1,27 @@
-Account:
-  email:
-    "tom@domain.com":
-      server: "server1.domain.com"
-      username: "user1"
-      password: "pass1"
-      port: 1111
-    "jane@domain.com":
-      server: "server2.domain.com"
-      username: "user2"
-      password: "pass2"
-      port: 2222
-    "admin@domain.com":
-      server: "server3.domain.com"
-      username: "user3"
-      password: "pass3"
-      port: 3333
+GmailService:
+  smtp_server: smtp.gmail.com
+  smtp_port: 587
+  username: your_gmail@gmail.com
+  password: your_gmail_password
+
+OutlookService:
+  smtp_server: smtp-mail.outlook.com
+  smtp_port: 587
+  username: your_outlook@outlook.com
+  password: your_outlook_password
+
+CloudflareService:
+  api_key: your_cloudflare_api_key
+  email: your_cloudflare_email@example.com
+
+GitLabService:
+  base_url: https://gitlab.com
+  private_token: your_gitlab_private_token
+
+GitHubService:
+  access_token: your_github_access_token
+
+PleskService:
+  host: your_plesk_host.com
+  username: your_plesk_username
+  password: your_plesk_password

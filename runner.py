@@ -13,7 +13,7 @@ def load_yaml(file_path):
         return yaml.safe_load(file)
 
 def list_classes_and_objects():
-    modules = ['Account', 'Message']
+    modules = ['Account', 'Message', 'email_service', 'cloudflare_service', 'gitlab_service', 'github_service', 'plesk_service']
     classes_and_objects = {}
 
     for module_name in modules:
@@ -24,11 +24,12 @@ def list_classes_and_objects():
         }
 
         for name, obj in inspect.getmembers(module):
-            if inspect.isclass(obj) and name == module_name:
-                classes_and_objects[module_name]['class'] = obj
-                for method_name, method_obj in inspect.getmembers(obj):
-                    if inspect.isfunction(method_obj) or inspect.ismethod(method_obj):
-                        classes_and_objects[module_name]['methods'][method_name.lower()] = method_obj
+            if inspect.isclass(obj):
+                if name == module_name.split('_')[0].capitalize() or name in ['GmailService', 'OutlookService', 'CloudflareService', 'GitLabService', 'GitHubService', 'PleskService']:
+                    classes_and_objects[name] = {
+                        'class': obj,
+                        'methods': {method_name.lower(): method_obj for method_name, method_obj in inspect.getmembers(obj) if inspect.isfunction(method_obj) or inspect.ismethod(method_obj)}
+                    }
 
     return classes_and_objects
 
@@ -58,36 +59,63 @@ def replace_aliases(command, aliases, converters):
             new_parts.append(aliases.get('action', {}).get(part.lower(), part))
     return ' '.join(new_parts)
 
-def execute_command(command, classes_and_objects):
+def parse_command_args(args):
+    parsed_args = {}
+    key = None
+    value = []
+    in_quotes = False
+
+    for arg in args:
+        if '=' in arg and not in_quotes:
+            if key:
+                parsed_args[key] = ' '.join(value)
+            key, val = arg.split('=', 1)
+            value = [val]
+            in_quotes = val.startswith('"') and not val.endswith('"')
+        elif in_quotes:
+            value.append(arg)
+            if arg.endswith('"'):
+                in_quotes = False
+        elif key:
+            value.append(arg)
+        else:
+            parsed_args[arg] = True
+
+    if key:
+        parsed_args[key] = ' '.join(value)
+
+    # Remove quotes from values
+    for k, v in parsed_args.items():
+        if isinstance(v, str):
+            parsed_args[k] = v.strip('"')
+
+    return parsed_args
+
+def execute_command(command, classes_and_objects, account_instance):
     parts = shlex.split(command)
     if len(parts) < 2:
         print(f"Error: Invalid command format: {command}")
         return
 
     method_name, module_name = parts[0].lower(), parts[1]
-    if module_name not in classes_and_objects:
-        print(f"Error: Module {module_name} not found.")
+    
+    if module_name == 'Account':
+        instance = account_instance
+    elif module_name == 'Message':
+        instance = classes_and_objects['Message']['class'](account_instance)
+    elif module_name in ['GmailService', 'OutlookService', 'CloudflareService', 'GitLabService', 'GitHubService', 'PleskService']:
+        # For service-specific commands, we use the Account instance's connect method
+        return account_instance.connect(module_name, **parse_command_args(parts[2:]))
+    else:
+        print(f"Error: Invalid module {module_name}.")
         return
-
-    class_obj = classes_and_objects[module_name]['class']
-    if not class_obj:
-        print(f"Error: Class not found in module {module_name}.")
-        return
-
-    instance = class_obj()
 
     if method_name not in classes_and_objects[module_name]['methods']:
         print(f"Error: Method {method_name} not found in class {module_name}.")
         return
 
     method = classes_and_objects[module_name]['methods'][method_name]
-    method_args = {}
-    for arg in parts[2:]:
-        if '=' in arg:
-            key, value = arg.split('=', 1)
-            method_args[key] = value
-        else:
-            method_args[arg] = True
+    method_args = parse_command_args(parts[2:])
 
     try:
         result = method(instance, **method_args)
@@ -117,13 +145,16 @@ def main():
 
     aliases = commands_data['commands']['python'].get('alias', {})
     converters = commands_data['commands']['python'].get('convert', {}).get('param', {})
+    
+    account_instance = classes_and_objects['Account']['class']()
+    
     print("\nExecuting commands:")
     for command in commands_data['commands']['python']['sentence']:
         replaced_command = replace_aliases(command, aliases, converters)
         print(f"\nRUN: {command}")
         if replaced_command != command:
             print(f"Replaced: {replaced_command}")
-        execute_command(replaced_command, classes_and_objects)
+        execute_command(replaced_command, classes_and_objects, account_instance)
 
 if __name__ == "__main__":
     main()

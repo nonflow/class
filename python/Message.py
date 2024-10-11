@@ -1,53 +1,50 @@
-from datetime import datetime
-
-
 class Message:
-    def __init__(self):
-        self.messages = {}
-        self.message_id = 0
+    def __init__(self, account):
+        self.account = account
 
-    def create(self, sender, content, subject):
-        self.message_id += 1
-        self.messages[self.message_id] = {
-            'sender': sender,
-            'content': content,
-            'subject': subject
-        }
-        print(f"Message created with ID: {self.message_id}")
-        return self.message_id
+    def create(self, to_email, subject, content):
+        if not self.account.email_service:
+            return "Error: No email service connected"
+        return self.account.email_service.send_email(to_email, subject, content)
 
-    def read(self, id):
-        id = int(id)
-        if id in self.messages:
-            message = self.messages[id]
-            print(f"Message {id}:")
-            print(f"From: {message['sender']}")
-            print(f"Subject: {message['subject']}")
-            print(f"Content: {message['content']}")
-            return message
+    def list(self, service, **kwargs):
+        if service == 'cloudflare':
+            if not self.account.cloudflare_service:
+                return "Error: Cloudflare service not connected"
+            return self.account.cloudflare_service.list_zones()
+        elif service == 'gitlab':
+            if not self.account.gitlab_service:
+                return "Error: GitLab service not connected"
+            return self.account.gitlab_service.list_projects()
+        elif service == 'github':
+            if not self.account.github_service:
+                return "Error: GitHub service not connected"
+            return self.account.github_service.list_repositories()
+        elif service == 'plesk':
+            if not self.account.plesk_service:
+                return "Error: Plesk service not connected"
+            return self.account.plesk_service.list_domains()
         else:
-            print(f"No message found with ID: {id}")
-            return None
+            return f"Error: Unsupported service for listing: {service}"
 
-    def list(self, from_date: str, to_date: str):
-        datetime_from = datetime.strptime(from_date, "%Y-%m-%d")
-        datetime_to = datetime.strptime(to_date, "%Y-%m-%d")
-        print("Messages between", datetime_from, "and", datetime_to, ":")
-        # Sortowanie po datach
-        message_list = []
-        for message_id, message in self.messages.items():
-            datetime_message = datetime.strptime(message['created_at'], '%Y-%m-%d')
-            if datetime_message >= datetime_from and datetime_message <= datetime_to:
-                message_list.append(message)
-        return message_list
-
-
-    def delete(self, id):
-        id = int(id)
-        if id in self.messages:
-            del self.messages[id]
-            print(f"Message {id} deleted")
-            return True
+    def create_issue(self, service, **kwargs):
+        if service == 'gitlab':
+            if not self.account.gitlab_service:
+                return "Error: GitLab service not connected"
+            return self.account.gitlab_service.create_issue(kwargs['project_id'], kwargs['title'], kwargs['description'])
+        elif service == 'github':
+            if not self.account.github_service:
+                return "Error: GitHub service not connected"
+            return self.account.github_service.create_issue(kwargs['repo_owner'], kwargs['repo_name'], kwargs['title'], kwargs['body'])
         else:
-            print(f"No message found with ID: {id}")
-            return False
+            return f"Error: Unsupported service for creating issues: {service}"
+
+    def purge_cache(self, zone_id):
+        if not self.account.cloudflare_service:
+            return "Error: Cloudflare service not connected"
+        return self.account.cloudflare_service.purge_cache(zone_id)
+
+    def create_database(self, webspace_name, db_name, db_user, db_password):
+        if not self.account.plesk_service:
+            return "Error: Plesk service not connected"
+        return self.account.plesk_service.create_database(webspace_name, db_name, db_user, db_password)

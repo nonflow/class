@@ -256,9 +256,9 @@ class EmailService:
 
         return emails
 
-    def download_attachments(self, from_date, to_date, download_dir='attachments', max_retries=3, timeout=300):
+    def download_attachments(self, from_date, to_date, download_dir='attachments', folder='INBOX', max_retries=3, timeout=300):
         """
-        Download all attachments from emails within the specified date range.
+        Download all attachments from emails within the specified date range and folder.
         
         :param from_date: Start date for email search (inclusive) in any recognizable date format
         :param to_date: End date for email search (inclusive) in any recognizable date format

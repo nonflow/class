@@ -20,10 +20,14 @@ plesk_main:
   username: your_actual_username  # TODO: Replace with your Plesk username
   password: your_actual_password  # TODO: Replace with your Plesk password
 
-email_main:
+softreck:
   service: EmailService
-  smtp_server: your_smtp_server  # TODO: Replace with your SMTP server address (e.g., smtp.gmail.com)
-  smtp_port: 587  # TODO: Replace with your SMTP port (587 is a common port for TLS)
+  smtp_server: smtp.example.com
+  smtp_port: 587
+  smtp_use_tls: true
+  imap_server: imap.example.com
+  imap_port: 993
+  imap_use_ssl: true
   username: your_email@example.com  # TODO: Replace with your email address
   password: your_email_password  # TODO: Replace with your email password or app-specific password
 

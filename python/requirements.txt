@@ -1,0 +1,9 @@
+opencv-python
+pytesseract
+Pillow
+torch
+torchvision
+Flask
+Werkzeug
+python-dotenv
+pandas

@@ -42,18 +42,18 @@ def parse_date(date_string):
         return None
 
 class EmailService:
-    def __init__(self, config):
-        self.smtp_server = config['smtp']['server']
-        self.smtp_port = config['smtp']['port']
-        self.smtp_use_tls = config['smtp']['use_tls']
-        self.pop3_server = config['pop3']['server']
-        self.pop3_port = config['pop3']['port']
-        self.pop3_use_ssl = config['pop3']['use_ssl']
-        self.imap_server = config['imap']['server']
-        self.imap_port = config['imap']['port']
-        self.imap_use_ssl = config['imap']['use_ssl']
-        self.username = config['username']
-        self.password = config['password']
+    def __init__(self, smtp_server, smtp_port, smtp_use_tls, imap_server, imap_port, imap_use_ssl, username, password):
+        self.smtp_server = smtp_server
+        self.smtp_port = smtp_port
+        self.smtp_use_tls = smtp_use_tls
+        self.imap_server = imap_server
+        self.imap_port = imap_port
+        self.imap_use_ssl = imap_use_ssl
+        self.username = username
+        self.password = password
+
+        if not all([self.smtp_server, self.smtp_port, self.imap_server, self.imap_port, self.username, self.password]):
+            raise ValueError("Missing required email configuration parameters")
 
     def is_valid_email(self, email):
         pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
@@ -121,6 +121,56 @@ class EmailService:
             logger.error(f"Failed to send email to {to_email}. Error: {str(e)}")
             return f"Failed to send email: {str(e)}"
 
+    def send_email_with_attachments(self, to_email, subject, body, attachments):
+        if not self.is_valid_email(to_email):
+            logger.error(f"Invalid email address: {to_email}")
+            return "Invalid email address"
+
+        msg = MIMEMultipart()
+        msg['From'] = self.username
+        msg['To'] = to_email
+        msg['Subject'] = subject
+        msg.attach(MIMEText(body, 'plain'))
+
+        if attachments:
+            if not isinstance(attachments, list):
+                attachments = [attachments]
+
+            for attachment in attachments:
+                with open(attachment, "rb") as file:
+                    part = MIMEApplication(file.read(), Name=os.path.basename(attachment))
+                part['Content-Disposition'] = f'attachment; filename="{os.path.basename(attachment)}"'
+                msg.attach(part)
+
+        try:
+            with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
+                server.starttls()
+                server.login(self.username, self.password)
+                server.send_message(msg)
+            logger.info(f"Email sent successfully to {to_email}")
+            return "Email sent successfully"
+        except smtplib.SMTPException as e:
+            logger.error(f"Failed to send email to {to_email}. Error: {str(e)}")
+            return f"Failed to send email: {str(e)}"
+
+    def send_html_email(self, to_email, subject, html_body):
+        msg = MIMEMultipart()
+        msg['From'] = self.username
+        msg['To'] = to_email
+        msg['Subject'] = subject
+        msg.attach(MIMEText(html_body, 'html'))
+
+        try:
+            with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
+                server.starttls()
+                server.login(self.username, self.password)
+                server.send_message(msg)
+            logger.info(f"HTML email sent successfully to {to_email}")
+            return "HTML email sent successfully"
+        except smtplib.SMTPException as e:
+            logger.error(f"Failed to send HTML email to {to_email}. Error: {str(e)}")
+            return f"Failed to send HTML email: {str(e)}"
+
     def send_bulk_email(self, to_emails, subject, body):
         successful_sends = 0
         failed_sends = 0
@@ -137,52 +187,52 @@ class EmailService:
     def list_emails(self, from_date, to_date):
         """
         List all emails between the specified date range.
-        
+
         :param from_date: Start date for email search (inclusive) in any recognizable date format
         :param to_date: End date for email search (inclusive) in any recognizable date format
         :return: List of email objects
         """
         from_date = parse_date(from_date)
         to_date = parse_date(to_date)
-        
+
         if not from_date or not to_date:
             return "Invalid date format"
-        
+
         logger.info(f"Listing emails from {from_date} to {to_date}")
-        
+
         emails = []
         try:
             # Connect to the IMAP server
             with imaplib.IMAP4_SSL(self.imap_server, self.imap_port) as imap_server:
                 # Login to the server
                 imap_server.login(self.username, self.password)
-                
+
                 # Select the mailbox you want to read from
                 imap_server.select('INBOX')
-                
+
                 # Search for emails within the date range
                 _, message_numbers = imap_server.search(None, f'(SINCE "{from_date}" BEFORE "{to_date}")')
-                
+
                 for num in message_numbers[0].split():
                     # Fetch the email message by ID
                     _, msg = imap_server.fetch(num, '(RFC822)')
-                    
+
                     for response in msg:
                         if isinstance(response, tuple):
                             # Parse the email content
                             email_msg = email.message_from_bytes(response[1])
-                            
+
                             # Decode the email subject
                             subject, encoding = decode_header(email_msg["Subject"])[0]
                             if isinstance(subject, bytes):
                                 subject = subject.decode(encoding or "utf-8")
-                            
+
                             # Get the sender
                             from_ = email_msg["From"]
-                            
+
                             # Get the date
                             date_ = email_msg["Date"]
-                            
+
                             # Get the body
                             if email_msg.is_multipart():
                                 for part in email_msg.walk():
@@ -191,7 +241,7 @@ class EmailService:
                                         break
                             else:
                                 body = email_msg.get_payload(decode=True).decode()
-                            
+
                             # Append the email details to our list
                             emails.append({
                                 "subject": subject,
@@ -199,11 +249,11 @@ class EmailService:
                                 "date": date_,
                                 "body": body[:100] + "..."  # Truncate body for brevity
                             })
-        
+
         except Exception as e:
             logger.error(f"Error listing emails: {str(e)}")
             return f"Failed to list emails: {str(e)}"
-        
+
         return emails
 
     def download_attachments(self, from_date, to_date, download_dir='attachments', max_retries=3, timeout=300):
@@ -213,6 +263,7 @@ class EmailService:
         :param from_date: Start date for email search (inclusive) in any recognizable date format
         :param to_date: End date for email search (inclusive) in any recognizable date format
         :param download_dir: Directory to save attachments (default: 'attachments')
+        :param folder: Email folder to search (default: 'INBOX', use '*' for all folders)
         :param max_retries: Maximum number of connection attempts (default: 3)
         :param timeout: Connection timeout in seconds (default: 300)
         :return: List of downloaded attachment filenames or error message
@@ -223,7 +274,7 @@ class EmailService:
         if not from_date or not to_date:
             return "Invalid date format"
         
-        logger.info(f"Downloading attachments from {from_date} to {to_date}")
+        logger.info(f"Downloading attachments from {from_date} to {to_date} in folder: {folder}")
         
         downloaded_files = []
         
@@ -237,35 +288,42 @@ class EmailService:
                     # Login to the server
                     imap_server.login(self.username, self.password)
                     
-                    # Select the mailbox you want to read from
-                    imap_server.select('INBOX')
+                    # Get list of folders to search
+                    folders_to_search = [folder]
+                    if folder == '*':
+                        _, folder_list = imap_server.list()
+                        folders_to_search = [f.decode().split('"/"')[-1].strip() for f in folder_list]
                     
-                    # Search for emails within the date range
-                    _, message_numbers = imap_server.search(None, f'(SINCE "{from_date}" BEFORE "{to_date}")')
-                    
-                    for num in message_numbers[0].split():
-                        # Fetch the email message by ID
-                        _, msg = imap_server.fetch(num, '(RFC822)')
+                    for current_folder in folders_to_search:
+                        # Select the mailbox you want to read from
+                        imap_server.select(current_folder)
                         
-                        for response in msg:
-                            if isinstance(response, tuple):
-                                # Parse the email content
-                                email_msg = email.message_from_bytes(response[1])
-                                
-                                # Download attachments
-                                for part in email_msg.walk():
-                                    if part.get_content_maintype() == 'multipart':
-                                        continue
-                                    if part.get('Content-Disposition') is None:
-                                        continue
+                        # Search for emails within the date range
+                        _, message_numbers = imap_server.search(None, f'(SINCE "{from_date}" BEFORE "{to_date}")')
+                        
+                        for num in message_numbers[0].split():
+                            # Fetch the email message by ID
+                            _, msg = imap_server.fetch(num, '(RFC822)')
+                            
+                            for response in msg:
+                                if isinstance(response, tuple):
+                                    # Parse the email content
+                                    email_msg = email.message_from_bytes(response[1])
+                                    
+                                    # Download attachments
+                                    for part in email_msg.walk():
+                                        if part.get_content_maintype() == 'multipart':
+                                            continue
+                                        if part.get('Content-Disposition') is None:
+                                            continue
 
-                                    filename = part.get_filename()
-                                    if filename:
-                                        filepath = os.path.join(download_dir, filename)
-                                        with open(filepath, 'wb') as f:
-                                            f.write(part.get_payload(decode=True))
-                                        downloaded_files.append(filepath)
-                                        logger.info(f"Downloaded: {filepath}")
+                                        filename = part.get_filename()
+                                        if filename:
+                                            filepath = os.path.join(download_dir, filename)
+                                            with open(filepath, 'wb') as f:
+                                                f.write(part.get_payload(decode=True))
+                                            downloaded_files.append(filepath)
+                                            logger.info(f"Downloaded: {filepath} from folder: {current_folder}")
                 
                 # If we've reached this point, the operation was successful
                 return downloaded_files
@@ -282,11 +340,11 @@ class EmailService:
                 logger.error(f"Unexpected error downloading attachments: {str(e)}")
                 return f"Failed to download attachments: {str(e)}"
 
-def create_email_service(config):
+def create_email_service(smtp_server, smtp_port, smtp_use_tls, imap_server, imap_port, imap_use_ssl, username, password):
     """
-    Factory method to create an EmailService instance based on the configuration.
+    Factory method to create an EmailService instance based on the provided parameters.
     """
-    return EmailService(config)
+    return EmailService(smtp_server, smtp_port, smtp_use_tls, imap_server, imap_port, imap_use_ssl, username, password)
 
 # The GmailService and OutlookService classes are no longer needed as we're using a generic EmailService
 # with specific configurations. You can remove these classes if they're not used elsewhere in your code.

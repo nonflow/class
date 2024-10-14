@@ -1,0 +1,19 @@
+version: '3'
+
+services:
+  rtsp-stream:
+    build:
+      context: .
+      args:
+        - PYTHON_VERSION=${PYTHON_VERSION}
+        - APP_PORT=${APP_PORT}
+        - TESSERACT_PATH=${TESSERACT_PATH}
+    ports:
+      - "${APP_PORT}:${APP_PORT}"
+    environment:
+      - RTSP_URL=${RTSP_URL}
+      - TESSERACT_CMD=${TESSERACT_PATH}
+#    volumes:
+#      - ./app:/app
+#    command: sh -c "./init.sh && python app.py"
+    command: ["python", "app.py"]

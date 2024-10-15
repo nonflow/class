@@ -1,0 +1,10 @@
+{
+    "25": {"protocol": "SMTP", "security": "Unencrypted"},
+    "465": {"protocol": "SMTP", "security": "SSL"},
+    "587": {"protocol": "SMTP", "security": "TLS"},
+    "2525": {"protocol": "SMTP", "security": "Alternative"},
+    "110": {"protocol": "POP3", "security": "Unencrypted"},
+    "995": {"protocol": "POP3", "security": "SSL"},
+    "143": {"protocol": "IMAP", "security": "Unencrypted"},
+    "993": {"protocol": "IMAP", "security": "SSL"}
+}

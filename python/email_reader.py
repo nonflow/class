@@ -176,59 +176,6 @@ class EmailReader:
                 logger.error(f"Unexpected error downloading attachments: {str(e)}")
                 return f"Failed to download attachments: {str(e)}"
 
-    def remove_emails_with_filters(self, download_dir='attachments', subject_filter=None, content_filter=None, from_date=None, to_date=None):
-        """
-        Remove downloaded email files based on specified filters.
-        
-        :param download_dir: Directory where email files are downloaded (default: 'attachments') 
-        :param subject_filter: String to search for in email subject (optional)
-        :param content_filter: String to search for in email content (optional)
-        :param from_date: Start date for email search (inclusive) in any recognizable date format (optional)
-        :param to_date: End date for email search (inclusive) in any recognizable date format (optional)
-        """
-        if from_date:
-            from_date = parse_date(from_date)
-        if to_date:  
-            to_date = parse_date(to_date)
-
-        for filename in os.listdir(download_dir):
-            filepath = os.path.join(download_dir, filename)
-            if not os.path.isfile(filepath):
-                continue
-
-            with open(filepath, 'r') as f:
-                email_msg = email.message_from_file(f)
-
-            subject = email_msg['Subject']
-            if subject_filter and subject_filter not in subject:
-                continue
-
-            body = ""
-            if email_msg.is_multipart():
-                for part in email_msg.walk():
-                    if part.get_content_type() == "text/plain":
-                        body = part.get_payload(decode=True).decode()
-                        break
-            else:
-                body = email_msg.get_payload(decode=True).decode()
-
-            if content_filter and content_filter not in body:
-                continue
-
-            date_tuple = email.utils.parsedate_tz(email_msg['Date'])
-            if date_tuple:
-                email_date = email.utils.mktime_tz(date_tuple)
-                email_date = time.strftime('%Y-%m-%d', time.localtime(email_date))
-                email_date = parse_date(email_date)
-
-                if from_date and email_date < from_date:
-                    continue
-                if to_date and email_date > to_date:
-                    continue
-
-            os.remove(filepath)
-            logger.info(f"Removed email file: {filename}")
-            
     def delete_emails_with_filters(self, subject_filter=None, content_filter=None, from_date=None, to_date=None, folder='INBOX'):
         """
         Delete emails from the server based on specified filters.
@@ -267,11 +214,11 @@ class EmailReader:
                 if content_filter:
                     criteria.append(f'(BODY "{content_filter}")')
                 
-                _, message_numbers = imap_server.search(None, *criteria)
+                _, message_numbers = imap_server.search(None, *[c.encode() for c in criteria])
                 
                 if message_numbers[0]:
                     # Convert message numbers to list of comma-separated strings
-                    message_ids = ','.join(message_numbers[0].split())
+                    message_ids = ','.join(message_numbers[0].decode().split())
                     
                     # Delete the emails
                     imap_server.store(message_ids, '+FLAGS', '\\Deleted')
